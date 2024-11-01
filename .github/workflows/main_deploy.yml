@@ -44,7 +44,7 @@ jobs:
         run: cat coverage.xml
 
       - name: Rewrite coverage report
-        run: sed -i 's|<source>/home/runner/work/Forest-Thinning/Forest-Thinning/app</source>|<source>Forest-Thinning</source>|g' coverage.xml
+        run: sed -i 's|<source>/home/runner/work/Forest-Thinning/Forest-Thinning/app</source>|<source>app</source>|g' coverage.xml
 
       - name: Display rewritten coverage report
         run: cat coverage.xml
