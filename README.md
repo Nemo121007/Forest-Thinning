@@ -21,3 +21,6 @@
 
 # ТЗ:
 https://drive.google.com/drive/folders/19EVTPYIxqRJEhhYEZnrLAmrIA9uQOPf0?usp=sharing
+
+# Тест хода работы
+https://www.overleaf.com/read/mttdshjhzbnm#60291f
