@@ -7,3 +7,7 @@ __pycache__/
 .idea/
 
 *.py[cod]
+
+*abc*
+
+abc.py
