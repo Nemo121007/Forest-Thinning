@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/Nemo121007/Forest-Thinning.git"
 
 [tool.poetry.dependencies]
-python = "3.12"
+python = "3.12.0"
 certifi = "^2024.8.30"
 charset-normalizer = "^3.3.2"
 colorama = "^0.4.6"
