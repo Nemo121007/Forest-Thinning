@@ -2,7 +2,7 @@
 name = "Forest-Thinning"
 version = "0.1.0"
 description = "Разработка программной системы, которая по входным данным (порода, объем, др.) формирует план рубок по уходу за лесом (объем рубки, периодичность)"
-authors = ["Nemo121007 sva.gashkov@gmail.com"]
+authors = ["Nemo121007 <sva.gashkov@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/Nemo121007/Forest-Thinning.git"
