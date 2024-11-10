@@ -1,16 +1,25 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import json
+import pandas as pd
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def main():
+    with open('../data_line/pine_sorrel/wpd.json', 'r') as f:
+        data = json.load(f)
+
+    data1 = data['datasetColl']
+    data2 = data1[0]
+    data3 = data2['data']
+
+    b = []
+    for i in range(len(data3)):
+        a = data3[i]
+        b.append(a["value"])
+
+    df = pd.DataFrame(b, columns=['x', 'y'])
+    print(df.head())
+
+    df.to_json('../data_line/tmp_data.json', orient='records')
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    main()

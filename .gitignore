@@ -8,6 +8,6 @@ __pycache__/
 
 *.py[cod]
 
-*abc*
+tmp_abc.py
 
-abc.py
+tmp_*
