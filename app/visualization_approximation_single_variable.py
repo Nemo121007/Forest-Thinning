@@ -11,14 +11,14 @@ from scipy.optimize import curve_fit
 def linear_regression(x, y):
     lin_reg = LinearRegression()
     lin_reg.fit(x.reshape(-1, 1), y)
-    y_predict = lin_reg.predict(x.reshape(-1, 1))
+    y_predictict = lin_reg.predict(x.reshape(-1, 1))
 
     # Вычисление метрик
-    mse = mean_squared_error(y, y_predict)
-    r2 = r2_score(y, y_predict)
+    mse = mean_squared_error(y, y_predictict)
+    r2 = r2_score(y, y_predictict)
     print(f"Линейная регрессия — MSE: {mse}, R2: {r2}")
 
-    return y_predict
+    return y_predictict
 
 
 def polynomial_regression_degree(x, y, degree):
@@ -26,14 +26,14 @@ def polynomial_regression_degree(x, y, degree):
     x_poly = poly_features.fit_transform(x.reshape(-1, 1))
     poly_reg = LinearRegression()
     poly_reg.fit(x_poly, y)
-    y_pred = poly_reg.predict(x_poly)
+    y_predict = poly_reg.predict(x_poly)
 
     # Вычисление метрик
-    mse = mean_squared_error(y, y_pred)
-    r2 = r2_score(y, y_pred)
+    mse = mean_squared_error(y, y_predict)
+    r2 = r2_score(y, y_predict)
     print(f"Полиномиальная регрессия (степень {degree}) — MSE: {mse}, R2: {r2}")
 
-    return y_pred
+    return y_predict
 
 
 # Экспоненциальная функция
@@ -45,13 +45,13 @@ def exponential_approximation(x, y):
     # Подбор параметров
     try:
         popt, _ = curve_fit(_exponential_model, x, y, maxfev=10000)
-        y_pred = _exponential_model(x, *popt)
+        y_predict = _exponential_model(x, *popt)
 
         # Вычисление метрик
-        mse = mean_squared_error(y, y_pred)
-        r2 = r2_score(y, y_pred)
+        mse = mean_squared_error(y, y_predict)
+        r2 = r2_score(y, y_predict)
         print(f"Экспоненциальная аппроксимация — MSE: {mse}, R2: {r2}")
-        return y_pred
+        return y_predict
 
     except RuntimeError:
         print("Экспоненциальная модель не подходит для этих данных.")

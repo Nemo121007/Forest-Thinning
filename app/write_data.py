@@ -56,7 +56,40 @@ def main_2():
     print("Data successfully saved to tmp_data.json.")
 
 
+def main_3():
+    with open('../data_line/pine_sorrel/wpd.json', 'r') as f:
+        data = json.load(f)
+
+    data = data['datasetColl']
+
+    # Создаем пустой словарь для хранения DataFrame
+    dataframes_dict = {}
+
+    for i in range(len(data)):
+        if re.match(r'growth line \d+', data[i]['name']):
+            line = data[i]
+            b = []
+
+            # Извлечение данных для текущей линии
+            for item in line['data']:
+                b.append(item["value"])
+
+            # Создаем DataFrame для текущей линии
+            df = pd.DataFrame(b, columns=['x', 'y'])
+
+            # Сохраняем DataFrame в словарь с ключом - названием линии
+            dataframes_dict[line['name']] = {
+                'name': line['name'],
+                'data': df.to_dict(orient='list'),
+                'start_point': df['y'][0]
+            }
+
+    with open('../data_line/tmp_data_3.json', 'w') as f:
+        json.dump(dataframes_dict, f)
+
+    print("Data successfully saved to tmp_data.json.")
+
 
 
 if __name__ == '__main__':
-    main_1()
+    main_3()
