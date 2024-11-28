@@ -4,9 +4,16 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
+"""
+visualization_approximation_two_variable.py
+
+Описание:
+    Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных
+"""
 
 
 def polynomial_regression_two_vars(X, y, degree):
+    """Полиномиальная регрессия от двух переменных заданной степени"""
     # Создаем полиномиальные признаки для двух переменных
     poly_features = PolynomialFeatures(degree=degree)
     X_poly = poly_features.fit_transform(X)
@@ -20,7 +27,7 @@ def polynomial_regression_two_vars(X, y, degree):
 
 if __name__ == '__main__':
     # Загрузка JSON-данных из файла
-    with open('../data_line/tmp_data_3.json', 'r') as f:
+    with open('../../data_line/tmp_data_3.json', 'r') as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных
@@ -68,17 +75,16 @@ if __name__ == '__main__':
         y0 = np.full(len(line['data']['x']), line['start_point'])
         x = np.array(line['data']['x'])
         y = np.array(line['data']['y'])
-        plt.scatter(x, y, alpha=0.5, label=f'Original {key}')
+        plt.plot(x, y, alpha=0.5, label=f'Original {key}', color='blue')
 
         # Предсказания на основе общей модели для текущего графика
         X_curr = np.column_stack((x, y0))
         X_curr_poly = poly_features.transform(X_curr)
         y_curr_pred = poly_reg.predict(X_curr_poly)
-        plt.plot(x, y_curr_pred, label=f'Predicted {key}', linestyle='--')
+        plt.plot(x, y_curr_pred, label=f'Predicted {key}', linestyle='--', color='black')
 
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title(
         f'Полиномиальная регрессия (степень {degree}) для всех графиков\nMSE: {mse_total:.4f}, R2: {r2_total:.4f}')
-    plt.legend()
     plt.show()
