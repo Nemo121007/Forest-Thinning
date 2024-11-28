@@ -1,5 +1,5 @@
 **wpd.json**
--**version**: list
+- **version**: list
   1. 4
   2. 2
 - **axesColl**: list - список осей
