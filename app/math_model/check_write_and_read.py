@@ -1,17 +1,11 @@
 import json
+import pickle
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-"""
-visualization_approximation_two_variable.py
 
-Описание:
-    Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных
-"""
-
-
+# Функция для обучения полиномиальной регрессии
 def polynomial_regression_two_vars(X, y, degree):
     """Полиномиальная регрессия от двух переменных заданной степени"""
     # Создаем полиномиальные признаки для двух переменных
@@ -66,26 +60,32 @@ if __name__ == '__main__':
     print(f"Общая MSE для всех графиков: {mse_total}")
     print(f"Общий R2 для всех графиков: {r2_total}")
 
-    # Построение графиков
-    plt.figure(figsize=(10, 6))
+    # Сохранение объектов poly_reg и poly_features в файлы
+    with open('poly_reg.pkl', 'wb') as f:
+        pickle.dump(poly_reg, f)
 
-    # Отображаем исходные данные для всех графиков
-    for key in data.keys():
-        line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
-        plt.plot(x, y, alpha=0.5, label=f'Original {key}', color='blue')
+    with open('poly_features.pkl', 'wb') as f:
+        pickle.dump(poly_features, f)
 
-        # Предсказания на основе общей модели для текущего графика
-        X_curr = np.column_stack((x, y0))
-        X_curr_poly = poly_features.transform(X_curr)
-        y_curr_pred = poly_reg.predict(X_curr_poly)
-        plt.plot(x, y_curr_pred, label=f'Predicted {key}', linestyle='--', color='black')
+    print("Модель и полиномиальные признаки сохранены в файлы.")
 
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(
-        f'Полиномиальная регрессия (степень {degree}) для всех графиков\nMSE: {mse_total:.4f}, R2: {r2_total:.4f}')
-    plt.legend()
-    plt.show()
+    # Восстановление объектов из файлов
+    with open('poly_reg.pkl', 'rb') as f:
+        loaded_poly_reg = pickle.load(f)
+
+    with open('poly_features.pkl', 'rb') as f:
+        loaded_poly_features = pickle.load(f)
+
+    print("Модель и полиномиальные признаки восстановлены из файлов.")
+
+
+
+    # Предсказание с использованием восстановленной модели
+    # Оценка модели на основе исходных данных
+    X_poly = loaded_poly_features.transform(X)
+    y_train_pred = loaded_poly_reg.predict(X_poly)
+    mse_total = mean_squared_error(y, y_train_pred)
+    r2_total = r2_score(y, y_train_pred)
+
+    print(f"Общая MSE для обучающей выборки: {mse_total}")
+    print(f"Общий R2 для обучающей выборки: {r2_total}")
