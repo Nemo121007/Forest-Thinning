@@ -1,82 +1,94 @@
-import numpy as np
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
+import json
+import tarfile
+import re
+from typing import Dict
+
+from matplotlib import pyplot as plt
+from sklearn.metrics import mean_squared_error, r2_score
+
+from app.Model.Line import Line
 
 
-class Line:
-    def __init__(self,
-                 polynomial_features: PolynomialFeatures = None,
-                 polynomial_regression: LinearRegression = None,
-                 name: str = None,
-                 X: list = None,
-                 Y: list = None,
-                 start_parameter: float = None):
-        # Инициализация атрибутов экземпляра
-        self.polynomial_features = polynomial_features or PolynomialFeatures()
-        self.polynomial_regression = polynomial_regression or LinearRegression()
-        self.name = name
-        self.X = np.array(X)
-        self.Y = np.array(Y)
-        self.start_parameter = start_parameter
+class Graph:
+    def __init__(self):
+        self.dict_line: Dict[str, Line] = {}
+        self.dict_model = {}
 
-    def load_data(self,
-                  polynomial_features: PolynomialFeatures = None,
-                  polynomial_regression: LinearRegression = None,
-                  name: str = None,
-                  X: list = None,
-                  Y: list = None,
-                  start_parameter: float = None):
-        """
-        Метод для загрузки данных в экземпляр класса Line.
-        """
-        if polynomial_features is not None:
-            self.polynomial_features = polynomial_features
-        if polynomial_regression is not None:
-            self.polynomial_regression = polynomial_regression
-        if name is not None:
-            self.name = name
-        if X is not None:
-            self.X = np.array(X)
-        if Y is not None:
-            self.Y = np.array(Y)
-        if start_parameter is not None:
-            self.start_parameter = start_parameter
+    def load_graph_in_tar(self, name_file: str):
+        tar_path = f'../../data_line/{name_file}.tar'
+        dataframes_dict = {}
 
-    @staticmethod
-    def _polynomial_regression_two_vars(X, y, degree):
-        """Полиномиальная регрессия от двух переменных заданной степени"""
-        # Создаем полиномиальные признаки для двух переменных
-        polynomial_features = PolynomialFeatures(degree=degree)
-        X_polynomial = polynomial_features.fit_transform(X)
+        try:
+            with tarfile.open(tar_path, 'r') as tar_ref:
+                file_member = tar_ref.getmember(f'{name_file}/wpd.json')
+                with tar_ref.extractfile(file_member) as file:
+                    data = json.load(file)
+                if 'datasetColl' not in data:
+                    raise KeyError("Key 'datasetColl' is missing in the JSON data")
 
-        # Линейная регрессия на полиномиальных признаках
-        polynomial_reg = LinearRegression()
-        polynomial_reg.fit(X_polynomial, y)
+                data = data['datasetColl']
 
-        return polynomial_reg, polynomial_features
+                for i in range(len(data)):
+                    line = data[i]
 
-    def fit_regression(self):
-        if not self.start_parameter:
-            raise ValueError('Incorrect value start_parameter')
-        if not self.X:
-            raise ValueError('Incorrect value X')
-        if not self.Y:
-            raise ValueError('Incorrect value Y')
-        if len(self.X) != len(self.Y):
-            raise ValueError('The size does not match X and Y')
+                    all_x = []
+                    all_y = []
 
-        start_parameter = [self.start_parameter] * len(self.X)
+                    # Извлечение данных для текущей линии
+                    for item in line['data']:
+                        all_x.append(item['value'][0])
+                        all_y.append(item['value'][1])
 
-        # Конвертируем в numpy массивы для модели
-        x = np.column_stack((self.X, start_parameter))
-        y = np.array(self.Y)
+                    if len(all_x) != len(all_y):
+                        raise ValueError('The number of arguments X and Y does not match')
 
-        # Обучаем общую модель на основе всех данных
-        degree = 4  # Задаем степень полинома
-        self.polynomial_regression, self.polynomial_features = self._polynomial_regression_two_vars(x, y, degree)
+                    item = Line()
+                    item.load_data(name=line['name'], X=all_x, Y=all_y)
+                    # Сохраняем данные в словарь
+                    if re.match(r'growth line \d+', line['name']):
+                        item.load_data(start_parameter=all_y[0])
+                    elif re.match(r'recovery line \d+', line['name']):
+                        item.load_data(start_parameter=all_x[0])
+                    else:
+                        item.load_data(start_parameter=0)
+                    dataframes_dict[line['name']] = item
 
-    def predict_value(self, x: float, start_point: float):
-        x = np.column_stack((x, start_point))
-        x_polynomial = self.polynomial_features.transform(x)
-        x = self.polynomial_regression.predict(x_polynomial)
-        return x
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File {tar_path} not found.")
+        except KeyError:
+            raise KeyError(f"File {name_file}/wpd.json not found in the archive.")
+
+        self.dict_line = dataframes_dict
+
+    def fit_models(self):
+        for key, item in self.dict_line.items():
+            try:
+                item.fit_regression()
+            except ValueError as e:
+                print(f"Error fitting regression for {key}: {e}")
+
+    def check_graph(self):
+        plt.figure(figsize=(10, 6))
+
+        for key, item in self.dict_line.items():
+            plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
+            list_predict = []
+            for x in item.X:
+                list_predict.append(item.predict_value(x, item.start_parameter))
+            plt.plot(item.X, list_predict, label=f'Predicted {key}', linestyle='--', color='black')
+
+            mse_total = mean_squared_error(item.Y, list_predict)
+            r2_total = r2_score(item.Y, list_predict)
+
+            print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
+            print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
+
+        plt.show()
+
+
+if __name__ == '__main__':
+    a = Graph()
+    a.load_graph_in_tar('pine_sorrel')
+    a.fit_models()
+    a.check_graph()
+    print(a)
