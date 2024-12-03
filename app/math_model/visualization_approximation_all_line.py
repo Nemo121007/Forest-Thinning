@@ -88,4 +88,5 @@ if __name__ == '__main__':
     plt.title(
         f'Полиномиальная регрессия')
     plt.legend()
+    plt.grid()
     plt.show()
