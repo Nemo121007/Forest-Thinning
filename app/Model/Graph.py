@@ -68,13 +68,32 @@ class Graph:
                 print(f"Error fitting regression for {key}: {e}")
 
     def check_graph(self):
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 7))
 
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
+
+            symbol = ''
+            list_change_symbol = []
+
             list_predict = []
-            for x in item.X:
-                list_predict.append(item.predict_value(x, item.start_parameter))
+            for i in range(len(item.X)):
+                y_predict = item.predict_value(item.X[i], item.start_parameter)
+                list_predict.append(y_predict)
+                different = item.Y[i] - y_predict
+
+                if different > 0 and symbol != '+' and abs(different) > 0.1:
+                    symbol = '+'
+                    list_change_symbol.append((item.X[i], different, symbol))
+                    plt.scatter(item.X[i], y_predict, color='red', label='Точки')
+                elif different < 0 and symbol != '-' and abs(different) > 0.1:
+                    symbol = '-'
+                    list_change_symbol.append((item.X[i], different, symbol))
+                    plt.scatter(item.X[i], y_predict, color='red', label='Точки')
+            with open(f'tmp_cache/{item.name}.json', 'w') as f:
+                json.dump(list_change_symbol, f)
+                print(f'Количество перегибов {item.name}: {len(list_change_symbol)}')
+
             plt.plot(item.X, list_predict, label=f'Predicted {key}', linestyle='--', color='black')
 
             mse_total = mean_squared_error(item.Y, list_predict)
@@ -89,6 +108,7 @@ class Graph:
 if __name__ == '__main__':
     a = Graph()
     a.load_graph_in_tar('pine_sorrel')
+    #a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
     print(a)

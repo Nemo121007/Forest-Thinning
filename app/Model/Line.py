@@ -4,6 +4,10 @@ from sklearn.linear_model import LinearRegression
 
 
 class Line:
+    _border: float
+    _list_polynomial_features: PolynomialFeatures
+    _list_polynomial_regression: LinearRegression
+
     def __init__(self,
                  polynomial_features: PolynomialFeatures = None,
                  polynomial_regression: LinearRegression = None,
@@ -35,6 +39,7 @@ class Line:
             self.name = name
         if X is not None:
             self.X = np.array(X)
+            self._border = X[len(X) % 2]
         if Y is not None:
             self.Y = np.array(Y)
         if start_parameter is not None:
