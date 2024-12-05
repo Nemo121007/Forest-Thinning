@@ -73,6 +73,11 @@ class Graph:
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
 
+            # list_predict = []
+            # item.fit_spline()
+            # for x in item.X:
+            #     list_predict.append(float(item.predict_spline(x)))
+
             symbol = ''
             list_change_symbol = []
 
@@ -102,13 +107,15 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
+
+
         plt.show()
 
 
 if __name__ == '__main__':
     a = Graph()
-    a.load_graph_in_tar('pine_sorrel')
-    #a.load_graph_in_tar('nortTaiga_pine_lingonberry')
+    #a.load_graph_in_tar('pine_sorrel')
+    a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
     print(a)
