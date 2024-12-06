@@ -16,7 +16,7 @@ class Graph:
 
     def load_graph_in_tar(self, name_file: str):
         tar_path = f'../../data_line/{name_file}.tar'
-        dataframes_dict = {}
+        dataframes_dict: Dict[str, Line] = {}
 
         try:
             with tarfile.open(tar_path, 'r') as tar_ref:
@@ -26,37 +26,59 @@ class Graph:
                 if 'datasetColl' not in data:
                     raise KeyError("Key 'datasetColl' is missing in the JSON data")
 
-                data = data['datasetColl']
+                data_list = list(data['datasetColl'])
+                data_list.sort(key=lambda x: x['name'])
 
-                for i in range(len(data)):
-                    line = data[i]
+                name: str = ''
+                all_x = []
+                all_y = []
+                all_start_parameter = []
 
-                    all_x = []
-                    all_y = []
+                for i, line in enumerate(data_list):
+                    current_name = re.sub(r'\d+$', '', line['name']).strip()
+
+                    # Если имя изменилось, создаём новый объект Line
+                    if name != current_name and name:
+                        item = Line()
+                        item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
+                        dataframes_dict[name] = item
+
+                        # Сброс данных для нового объекта
+                        all_x = []
+                        all_y = []
+                        all_start_parameter = []
+
+                    name = current_name
 
                     # Извлечение данных для текущей линии
-                    for item in line['data']:
-                        all_x.append(item['value'][0])
-                        all_y.append(item['value'][1])
+                    for item_data in line['data']:
+                        all_x.append(item_data['value'][0])
+                        all_y.append(item_data['value'][1])
 
+                    # Определение стартового параметра
+                    if re.match(r'^growth line \d+$', name):
+                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][1]] * len(line['data'])
+                    elif re.match(r'^recovery line \d+$', name):
+                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][0]] * len(line['data'])
+                    else:
+                        all_start_parameter = [0] * len(all_x)
+
+                    # Проверка длины данных
                     if len(all_x) != len(all_y):
                         raise ValueError('The number of arguments X and Y does not match')
 
+                # Добавляем последний объект Line в словарь
+                if all_x and all_y:
                     item = Line()
-                    item.load_data(name=line['name'], X=all_x, Y=all_y)
-                    # Сохраняем данные в словарь
-                    if re.match(r'growth line \d+', line['name']):
-                        item.load_data(start_parameter=all_y[0])
-                    elif re.match(r'recovery line \d+', line['name']):
-                        item.load_data(start_parameter=all_x[0])
-                    else:
-                        item.load_data(start_parameter=0)
-                    dataframes_dict[line['name']] = item
+                    item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
+                    dataframes_dict[name] = item
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {tar_path} not found.")
-        except KeyError:
-            raise KeyError(f"File {name_file}/wpd.json not found in the archive.")
+        except KeyError as e:
+            raise KeyError(f"Key error: {e}")
+        except ValueError as e:
+            raise ValueError(f"Value error: {e}")
 
         self.dict_line = dataframes_dict
 
@@ -68,7 +90,7 @@ class Graph:
                 print(f"Error fitting regression for {key}: {e}")
 
     def check_graph(self):
-        plt.figure(figsize=(12, 7))
+        plt.figure(figsize=(20, 15))
 
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
@@ -107,14 +129,12 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
-
-
         plt.show()
 
 
 if __name__ == '__main__':
     a = Graph()
-    #a.load_graph_in_tar('pine_sorrel')
+    # a.load_graph_in_tar('pine_sorrel')
     a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
