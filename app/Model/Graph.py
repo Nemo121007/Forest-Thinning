@@ -43,14 +43,13 @@ class Graph:
                         raise ValueError('The number of arguments X and Y does not match')
 
                     item = Line()
-                    item.load_data(name=line['name'], X=all_x, Y=all_y)
                     # Сохраняем данные в словарь
                     if re.match(r'growth line \d+', line['name']):
-                        item.load_data(start_parameter=all_y[0])
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_y[0])
                     elif re.match(r'recovery line \d+', line['name']):
-                        item.load_data(start_parameter=all_x[0])
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
                     else:
-                        item.load_data(start_parameter=0)
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
                     dataframes_dict[line['name']] = item
 
         except FileNotFoundError:
@@ -83,7 +82,7 @@ class Graph:
 
             list_predict = []
             for i in range(len(item.X)):
-                y_predict = item.predict_value(item.X[i], item.start_parameter)
+                y_predict = item.predict_value(item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
