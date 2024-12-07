@@ -34,44 +34,29 @@ class Graph:
                 all_y = []
                 all_start_parameter = []
 
-                for i, line in enumerate(data_list):
-                    current_name = re.sub(r'\d+$', '', line['name']).strip()
+                for i in range(len(data)):
+                    line = data[i]
 
-                    # Если имя изменилось, создаём новый объект Line
-                    if name != current_name and name:
-                        item = Line()
-                        item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
-                        dataframes_dict[name] = item
-
-                        # Сброс данных для нового объекта
-                        all_x = []
-                        all_y = []
-                        all_start_parameter = []
-
-                    name = current_name
+                    all_x = []
+                    all_y = []
 
                     # Извлечение данных для текущей линии
-                    for item_data in line['data']:
-                        all_x.append(item_data['value'][0])
-                        all_y.append(item_data['value'][1])
+                    for item in line['data']:
+                        all_x.append(item['value'][0])
+                        all_y.append(item['value'][1])
 
-                    # Определение стартового параметра
-                    if re.match(r'^growth line \d+$', name):
-                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][1]] * len(line['data'])
-                    elif re.match(r'^recovery line \d+$', name):
-                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][0]] * len(line['data'])
-                    else:
-                        all_start_parameter = [0] * len(all_x)
-
-                    # Проверка длины данных
                     if len(all_x) != len(all_y):
                         raise ValueError('The number of arguments X and Y does not match')
 
-                # Добавляем последний объект Line в словарь
-                if all_x and all_y:
                     item = Line()
-                    item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
-                    dataframes_dict[name] = item
+                    # Сохраняем данные в словарь
+                    if re.match(r'growth line \d+', line['name']):
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_y[0])
+                    elif re.match(r'recovery line \d+', line['name']):
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
+                    else:
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
+                    dataframes_dict[line['name']] = item
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {tar_path} not found.")
@@ -129,12 +114,14 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
+
+
         plt.show()
 
 
 if __name__ == '__main__':
     a = Graph()
-    # a.load_graph_in_tar('pine_sorrel')
+    #a.load_graph_in_tar('pine_sorrel')
     a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
