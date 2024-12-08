@@ -29,13 +29,8 @@ class Graph:
                 data_list = list(data['datasetColl'])
                 data_list.sort(key=lambda x: x['name'])
 
-                name: str = ''
-                all_x = []
-                all_y = []
-                all_start_parameter = []
-
-                for i in range(len(data)):
-                    line = data[i]
+                for i in range(len(data_list)):
+                    line = data_list[i]
 
                     all_x = []
                     all_y = []
@@ -75,7 +70,7 @@ class Graph:
                 print(f"Error fitting regression for {key}: {e}")
 
     def check_graph(self):
-        plt.figure(figsize=(20, 15))
+        plt.figure(figsize=(15, 10))
 
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
@@ -90,7 +85,7 @@ class Graph:
 
             list_predict = []
             for i in range(len(item.X)):
-                y_predict = item.predict_value(item.X[i], item.start_parameter)
+                y_predict = item.predict_value(item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
@@ -114,15 +109,13 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
-
-
         plt.show()
 
 
 if __name__ == '__main__':
     a = Graph()
-    #a.load_graph_in_tar('pine_sorrel')
-    a.load_graph_in_tar('nortTaiga_pine_lingonberry')
+    a.load_graph_in_tar('pine_sorrel')
+    # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
     print(a)

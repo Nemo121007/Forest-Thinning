@@ -19,7 +19,6 @@ class Line:
                  X: list = None,
                  Y: list = None,
                  start_parameter: List[float] = None):
-                 start_parameter: float = None):
         if (X is not None) or (Y is not None) or (start_parameter is not None):
             if (X is None) or (Y is None) or (start_parameter is None):
                 raise ValueError("X, Y, and start_parameter must all be provided")
