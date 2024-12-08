@@ -72,6 +72,7 @@ class Graph:
     def check_graph(self):
         plt.figure(figsize=(15, 10))
 
+        max_different = 0
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
 
@@ -97,6 +98,8 @@ class Graph:
                     symbol = '-'
                     list_change_symbol.append((item.X[i], different, symbol))
                     plt.scatter(item.X[i], y_predict, color='red', label='Точки')
+                if max_different < abs(different):
+                    max_different = abs(different)
             with open(f'tmp_cache/{item.name}.json', 'w') as f:
                 json.dump(list_change_symbol, f)
                 print(f'Количество перегибов {item.name}: {len(list_change_symbol)}')
@@ -109,6 +112,7 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
+        print(f'Максимальная ошибка при аппроксимации: {max_different}')
         plt.show()
 
 
