@@ -29,49 +29,29 @@ class Graph:
                 data_list = list(data['datasetColl'])
                 data_list.sort(key=lambda x: x['name'])
 
-                name: str = ''
-                all_x = []
-                all_y = []
-                all_start_parameter = []
+                for i in range(len(data_list)):
+                    line = data_list[i]
 
-                for i, line in enumerate(data_list):
-                    current_name = re.sub(r'\d+$', '', line['name']).strip()
-
-                    # Если имя изменилось, создаём новый объект Line
-                    if name != current_name and name:
-                        item = Line()
-                        item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
-                        dataframes_dict[name] = item
-
-                        # Сброс данных для нового объекта
-                        all_x = []
-                        all_y = []
-                        all_start_parameter = []
-
-                    name = current_name
+                    all_x = []
+                    all_y = []
 
                     # Извлечение данных для текущей линии
-                    for item_data in line['data']:
-                        all_x.append(item_data['value'][0])
-                        all_y.append(item_data['value'][1])
+                    for item in line['data']:
+                        all_x.append(item['value'][0])
+                        all_y.append(item['value'][1])
 
-                    # Определение стартового параметра
-                    if re.match(r'^growth line \d+$', name):
-                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][1]] * len(line['data'])
-                    elif re.match(r'^recovery line \d+$', name):
-                        all_start_parameter = all_start_parameter + [line['data'][0]['value'][0]] * len(line['data'])
-                    else:
-                        all_start_parameter = [0] * len(all_x)
-
-                    # Проверка длины данных
                     if len(all_x) != len(all_y):
                         raise ValueError('The number of arguments X and Y does not match')
 
-                # Добавляем последний объект Line в словарь
-                if all_x and all_y:
                     item = Line()
-                    item.load_data(name=name, X=all_x, Y=all_y, start_parameter=all_start_parameter)
-                    dataframes_dict[name] = item
+                    # Сохраняем данные в словарь
+                    if re.match(r'growth line \d+', line['name']):
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_y[0])
+                    elif re.match(r'recovery line \d+', line['name']):
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
+                    else:
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
+                    dataframes_dict[line['name']] = item
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {tar_path} not found.")
@@ -90,7 +70,7 @@ class Graph:
                 print(f"Error fitting regression for {key}: {e}")
 
     def check_graph(self):
-        plt.figure(figsize=(20, 15))
+        plt.figure(figsize=(15, 10))
 
         for key, item in self.dict_line.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
@@ -105,7 +85,7 @@ class Graph:
 
             list_predict = []
             for i in range(len(item.X)):
-                y_predict = item.predict_value(item.X[i], item.start_parameter)
+                y_predict = item.predict_value(item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
@@ -134,8 +114,8 @@ class Graph:
 
 if __name__ == '__main__':
     a = Graph()
-    # a.load_graph_in_tar('pine_sorrel')
-    a.load_graph_in_tar('nortTaiga_pine_lingonberry')
+    a.load_graph_in_tar('pine_sorrel')
+    # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
     print(a)
