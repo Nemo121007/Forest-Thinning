@@ -13,6 +13,7 @@ class Graph:
     def __init__(self):
         self.dict_line: Dict[str, Line] = {}
         self.dict_model = {}
+        self.dict_test: Dict[str, Line] = {}
 
     def load_graph_in_tar(self, name_file: str):
         tar_path = f'../../data_line/{name_file}.tar'
@@ -44,9 +45,25 @@ class Graph:
                         raise ValueError('The number of arguments X and Y does not match')
 
                     item = Line()
-                    # Сохраняем данные в словарь
                     if re.match(r'growth line \d+', line['name']):
                         item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_y[0])
+                    elif re.match(r'recovery line \d+', line['name']):
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
+                    else:
+                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
+                    self.dict_test[line['name']] = item
+
+                    item = Line()
+                    # Сохраняем данные в словарь
+                    if re.match(r'growth line \d+', line['name']):
+                        if 'growth line' in dataframes_dict:
+                            item = dataframes_dict['growth line']
+                            item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
+                            continue
+                        else:
+                            item.load_data(name='growth line', X=all_x, Y=all_y, start_parameter=all_y[0])
+                            dataframes_dict['growth line'] = item
+                            continue
                     elif re.match(r'recovery line \d+', line['name']):
                         item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
                     else:
@@ -73,7 +90,7 @@ class Graph:
         plt.figure(figsize=(15, 10))
 
         max_different = 0
-        for key, item in self.dict_line.items():
+        for key, item in self.dict_test.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
 
             # list_predict = []
@@ -86,7 +103,11 @@ class Graph:
 
             list_predict = []
             for i in range(len(item.X)):
-                y_predict = item.predict_value(item.X[i], item.start_parameter[i])
+                if re.match(r'growth line \d+', item.name):
+                    model = self.dict_line['growth line']
+                else:
+                    model = self.dict_line[item.name]
+                y_predict = model.predict_value(item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
