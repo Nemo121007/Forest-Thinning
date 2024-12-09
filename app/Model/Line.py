@@ -194,5 +194,4 @@ class Line:
 
         # Предсказание на основе обученной модели
         y = polynomial_regression.predict(x_polynomial)
-
         return float(y[0])
