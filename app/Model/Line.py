@@ -97,13 +97,13 @@ class Line:
                 raise ValueError('Incorrect len X or Y')
 
         # Преобразуем списки в массивы NumPy
-        X = np.array(X)
-        Y = np.array(Y)
-        new_start_parameter = np.full(len(X), start_parameter)
+        x = np.array(X)
+        y = np.array(Y)
+        new_start_parameter = np.full(len(x), start_parameter)
 
         # Объединяем существующие данные с новыми
-        self.X = np.concatenate((self.X, X))
-        self.Y = np.concatenate((self.Y, Y))
+        self.X = np.concatenate((self.X, x))
+        self.Y = np.concatenate((self.Y, y))
         self.start_parameter = np.concatenate((self.start_parameter, new_start_parameter))
 
         # Сортируем данные по X
@@ -144,7 +144,7 @@ class Line:
         if len(self.X) != len(self.Y):
             raise ValueError('The size does not match X and Y')
 
-        degree = 4  # Задаем степень полинома
+        degree = 5  # Задаем степень полинома
 
         overlap = int(0.1 * len(self.X))  # 10% перекрытия
 
