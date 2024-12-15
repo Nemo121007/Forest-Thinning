@@ -65,7 +65,14 @@ class Graph:
                             dataframes_dict['growth line'] = item
                             continue
                     elif re.match(r'recovery line \d+', line['name']):
-                        item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
+                        if 'recovery line' in dataframes_dict:
+                            item = dataframes_dict['recovery line']
+                            item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
+                            continue
+                        else:
+                            item.load_data(name='recovery line', X=all_x, Y=all_y, start_parameter=all_x[0])
+                            dataframes_dict['recovery line'] = item
+                            continue
                     else:
                         item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
                     dataframes_dict[line['name']] = item
@@ -93,11 +100,6 @@ class Graph:
         for key, item in self.dict_test.items():
             plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
 
-            # list_predict = []
-            # item.fit_spline()
-            # for x in item.X:
-            #     list_predict.append(float(item.predict_spline(x)))
-
             symbol = ''
             list_change_symbol = []
 
@@ -105,6 +107,8 @@ class Graph:
             for i in range(len(item.X)):
                 if re.match(r'growth line \d+', item.name):
                     model = self.dict_line['growth line']
+                elif re.match(r'recovery line \d+', item.name):
+                    model = self.dict_line['recovery line']
                 else:
                     model = self.dict_line[item.name]
                 y_predict = model.predict_value(item.X[i], item.start_parameter[i])
@@ -139,8 +143,8 @@ class Graph:
 
 if __name__ == '__main__':
     a = Graph()
-    a.load_graph_in_tar('pine_sorrel')
-    # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
+    # a.load_graph_in_tar('pine_sorrel')
+    a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
     print(a)
