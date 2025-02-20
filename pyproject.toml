@@ -1,53 +1,21 @@
-[tool.poetry]
-name = "Forest-Thinning"
+[project]
+name = "forestthinning"
 version = "0.1.0"
-description = "Разработка программной системы, которая по входным данным (порода, объем, др.) формирует план рубок по уходу за лесом (объем рубки, периодичность)"
-authors = ["Nemo121007 <sva.gashkov@gmail.com>"]
-license = "MIT"
+description = "Development of a software system that, based on input data (breed, volume, etc.), forms a logging plan for forest care (logging volume, frequency)"
+authors = [
+    {name = "Gashkov Saveliy",email = "120210549+Nemo121007@users.noreply.github.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
-repository = "https://github.com/Nemo121007/Forest-Thinning.git"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy (>=2.2.2,<3.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "matplotlib (>=3.10.0,<4.0.0)",
+    "scikit-learn (>=1.6.1,<2.0.0)"
+]
 
-[tool.poetry.dependencies]
-python = "3.12.0"
-certifi = "^2024.8.30"
-charset-normalizer = "^3.4.0"
-colorama = "^0.4.6"
-coverage = "^7.6.4"
-coveralls = "^4.0.1"
-docopt = "^0.6.2"
-idna = "^3.10"
-iniconfig = "^2.0.0"
-packaging = "^24.2"
-pluggy = "^1.5.0"
-requests = "^2.32.3"
-urllib3 = "^2.2.3"
-
-scipy = "^1.14.1"
-matplotlib = "^3.9.2"
-scikit-learn = "^1.5.2"
-numpy = "^2.1.3"
-pandas = "^2.2.3"
-
-[tool.poetry.dev-dependencies]
-pytest = "^8.3.3"
-pytest-cov = "^6.0.0"
 
 [build-system]
-requires = ["poetry>=1.1.0"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.pytest.ini_options]
-addopts = "--cov=app --cov-report=xml:coverage.xml"
-testpaths = ["tests"]
-
-[tool.coverage.run]
-branch = true
-source = ["app"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self\\.debug",
-    "if __name__\\s*==\\s*\"__main__\":"
-]
