@@ -54,13 +54,9 @@ class Graph:
 
         item = Line()
         if re.match(r"growth line \d+", line["name"]):
-            item.load_data(
-                name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0]
-            )
+            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0])
         elif re.match(r"recovery line \d+", line["name"]):
-            item.load_data(
-                name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0]
-            )
+            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0])
         else:
             item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
         self.dict_test[line["name"]] = item
@@ -72,18 +68,14 @@ class Graph:
                 item = self.dict_line["growth line"]
                 item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
             else:
-                item.load_data(
-                    name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0]
-                )
+                item.load_data(name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0])
                 self.dict_line["growth line"] = item
         elif re.match(r"recovery line \d+", line["name"]):
             if "recovery line" in self.dict_line:
                 item = self.dict_line["recovery line"]
                 item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
             else:
-                item.load_data(
-                    name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0]
-                )
+                item.load_data(name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0])
                 self.dict_line["recovery line"] = item
         else:
             item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)

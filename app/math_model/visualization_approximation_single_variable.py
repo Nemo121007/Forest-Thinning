@@ -1,3 +1,10 @@
+"""
+visualization_approximation_single_variable.py
+
+Описание:
+    Данный файл содержит код различных видов аппроксимации и сравнения их эффективности
+"""
+
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,13 +13,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.optimize import curve_fit
-
-"""
-visualization_approximation_single_variable.py
-
-Описание:
-    Данный файл содержит код различных видов аппроксимации и сравнения их эффективности
-"""
 
 
 def linear_regression(x, y):
@@ -86,9 +86,7 @@ def logarithmic_approximation_with_power(x, y, p):
         # Вычисление метрик
         mse = mean_squared_error(y, y_pred)
         r2 = r2_score(y, y_pred)
-        print(
-            f"Логарифмическая аппроксимация с фиксированной степенью p={p} — MSE: {mse}, R2: {r2}"
-        )
+        print(f"Логарифмическая аппроксимация с фиксированной степенью p={p} — MSE: {mse}, R2: {r2}")
         print(f"Оптимальные параметры: a = {popt[0]}, b = {popt[1]}")
         return y_pred, popt
     except RuntimeError:
@@ -118,9 +116,7 @@ def rational_polynomial_function(x, y, degree):
     # Этап 2: Оптимизация знаменателя
     # Целевое значение: разница между реальными значениями и предсказанным числителем
     residuals = y - y_num
-    model_den, poly_features_den = polynomial_function(
-        x, residuals + 1, degree
-    )  # Добавляем 1 для стабильности
+    model_den, poly_features_den = polynomial_function(x, residuals + 1, degree)  # Добавляем 1 для стабильности
     x_poly_den = poly_features_den.transform(x.reshape(-1, 1))
     y_den = model_den.predict(x_poly_den)
 
@@ -133,9 +129,7 @@ def rational_polynomial_function(x, y, degree):
     # Вычисление метрик
     mse = mean_squared_error(y, y_pred)
     r2 = r2_score(y, y_pred)
-    print(
-        f"Рациональная функция (P1/P2) (степень {degree}) — MSE: {mse:.4f}, R2: {r2:.4f}"
-    )
+    print(f"Рациональная функция (P1/P2) (степень {degree}) — MSE: {mse:.4f}, R2: {r2:.4f}")
 
     return y_pred
 

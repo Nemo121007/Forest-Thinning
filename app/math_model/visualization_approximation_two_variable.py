@@ -1,16 +1,16 @@
-import json
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import mean_squared_error, r2_score
-
 """
 visualization_approximation_two_variable.py
 
 Описание:
     Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных
 """
+
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 def polynomial_regression_two_vars(X, y, degree):
@@ -39,9 +39,7 @@ if __name__ == "__main__":
     # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(
-            len(line["data"]["x"]), line["start_point"]
-        )  # Преобразуем y0 в массив
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
         x = np.array(line["data"]["x"])
         y = np.array(line["data"]["y"])
 
@@ -84,9 +82,7 @@ if __name__ == "__main__":
         X_curr = np.column_stack((x, y0))
         X_curr_poly = poly_features.transform(X_curr)
         y_curr_pred = poly_reg.predict(X_curr_poly)
-        plt.plot(
-            x, y_curr_pred, label=f"Predicted {key}", linestyle="--", color="black"
-        )
+        plt.plot(x, y_curr_pred, label=f"Predicted {key}", linestyle="--", color="black")
 
     plt.xlabel("x")
     plt.ylabel("y")

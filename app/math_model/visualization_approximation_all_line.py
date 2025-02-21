@@ -1,3 +1,10 @@
+"""
+visualization_approximation_all_line.py
+
+Описание:
+    Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных для всех графиков 1 изображения
+"""
+
 import json
 import numpy as np
 import re
@@ -5,13 +12,6 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
-
-"""
-visualization_approximation_all_line.py
-
-Описание:
-    Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных для всех графиков 1 изображения
-"""
 
 
 def polynomial_regression_two_vars(X, y, degree):
@@ -60,9 +60,7 @@ if __name__ == "__main__":
         for i in data.keys():
             if re.match(pattern=key, string=data[i]["name"]):
                 line = data[i]
-                y0 = np.full(
-                    len(line["data"]["x"]), line["start_point"]
-                )  # Преобразуем y0 в массив
+                y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
                 x = np.array(line["data"]["x"])
                 y = np.array(line["data"]["y"])
 

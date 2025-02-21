@@ -48,9 +48,7 @@ def main_2():
             dataframes_dict[line["name"]] = df
 
     # Конвертируем DataFrame в словарь и сохраняем в JSON
-    data_to_save = {
-        name: df.to_dict(orient="list") for name, df in dataframes_dict.items()
-    }
+    data_to_save = {name: df.to_dict(orient="list") for name, df in dataframes_dict.items()}
 
     with open("../data_line/tmp_data_2.json", "w") as f:
         json.dump(data_to_save, f)

@@ -1,8 +1,3 @@
-import json
-import re
-import tarfile
-import pandas as pd
-
 """
 write_data.py
 
@@ -10,6 +5,11 @@ write_data.py
     Данный файл содержит код для переписывания данных из архива .tar в промежуточные файлы tmp_data_d+ для
     дальнейшего анализа
 """
+
+import json
+import re
+import tarfile
+import pandas as pd
 
 
 def main_1():
@@ -58,9 +58,7 @@ def main_2():
             dataframes_dict[line["name"]] = df
 
     # Конвертируем DataFrame в словарь и сохраняем в JSON
-    data_to_save = {
-        name: df.to_dict(orient="list") for name, df in dataframes_dict.items()
-    }
+    data_to_save = {name: df.to_dict(orient="list") for name, df in dataframes_dict.items()}
 
     with open("../../data_line/tmp_data_2.json", "w") as f:
         json.dump(data_to_save, f)
@@ -122,9 +120,7 @@ def main_4():
             dataframes_dict = {}
 
             for i in range(len(data)):
-                if re.match(r"growth line \d+", data[i]["name"]) or re.match(
-                    r"standard growth line", data[i]["name"]
-                ):
+                if re.match(r"growth line \d+", data[i]["name"]) or re.match(r"standard growth line", data[i]["name"]):
                     line = data[i]
                     b = []
 

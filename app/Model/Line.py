@@ -27,12 +27,8 @@ class Line:
             elif len(X) != len(Y):
                 raise ValueError("Incorrect len X or Y")
         # Инициализация атрибутов экземпляра
-        self.list_polynomial_features: List[PolynomialFeatures] = (
-            list_polynomial_features or []
-        )
-        self.list_polynomial_regression: List[LinearRegression] = (
-            list_polynomial_regression or []
-        )
+        self.list_polynomial_features: List[PolynomialFeatures] = list_polynomial_features or []
+        self.list_polynomial_regression: List[LinearRegression] = list_polynomial_regression or []
         self.name: str = name
         self.X: np.array = np.array(X) if X else None
         self.Y: np.array = np.array(Y) if Y else None
@@ -109,9 +105,7 @@ class Line:
         # Объединяем существующие данные с новыми
         self.X = np.concatenate((self.X, x))
         self.Y = np.concatenate((self.Y, y))
-        self.start_parameter = np.concatenate(
-            (self.start_parameter, new_start_parameter)
-        )
+        self.start_parameter = np.concatenate((self.start_parameter, new_start_parameter))
 
         # Сортируем данные по X
         sorted_indices = np.argsort(self.X)
@@ -158,20 +152,10 @@ class Line:
         # Формируем список сегментов с перекрытием
         segments = [
             (
-                self.X[
-                    max(0, self._borders[i] - overlap) : min(
-                        len(self.X), self._borders[i + 1] + overlap
-                    )
-                ],
-                self.Y[
-                    max(0, self._borders[i] - overlap) : min(
-                        len(self.Y), self._borders[i + 1] + overlap
-                    )
-                ],
+                self.X[max(0, self._borders[i] - overlap) : min(len(self.X), self._borders[i + 1] + overlap)],
+                self.Y[max(0, self._borders[i] - overlap) : min(len(self.Y), self._borders[i + 1] + overlap)],
                 self.start_parameter[
-                    max(0, self._borders[i] - overlap) : min(
-                        len(self.start_parameter), self._borders[i + 1] + overlap
-                    )
+                    max(0, self._borders[i] - overlap) : min(len(self.start_parameter), self._borders[i + 1] + overlap)
                 ],
             )
             for i in range(len(self._borders) - 1)
@@ -180,9 +164,7 @@ class Line:
         # Обучаем модели для каждого сегмента
         for x_segment, y_segment, start_segment in segments:
             x_combined = np.column_stack((x_segment, start_segment))
-            polynomial_reg, polynomial_features = self._polynomial_regression_two_vars(
-                x_combined, y_segment, degree
-            )
+            polynomial_reg, polynomial_features = self._polynomial_regression_two_vars(x_combined, y_segment, degree)
             self.list_polynomial_regression.append(polynomial_reg)
             self.list_polynomial_features.append(polynomial_features)
 

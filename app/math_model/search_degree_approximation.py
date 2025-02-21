@@ -1,16 +1,16 @@
-import json
-import numpy as np
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-import matplotlib.pyplot as plt
-
 """
 search_degree_approximation.py
 
 Описание:
     Данный файл содержит код проверки, какая степень полиномиальной аппроксимации даёт наилучший результат
 """
+
+import json
+import numpy as np
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+import matplotlib.pyplot as plt
 
 
 def polynomial_regression_two_vars(X, y, degree):

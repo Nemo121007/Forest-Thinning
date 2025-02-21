@@ -1,10 +1,3 @@
-import json
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import mean_squared_error, r2_score
-
 """
 approximation_two_variable_predict.py
 
@@ -12,6 +5,13 @@ approximation_two_variable_predict.py
     Данный файл содержит код определения точности предсказания графиков в случае, если они обучаются по
     неполным графикам
 """
+
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 def polynomial_regression_two_vars(X, y, degree):
@@ -48,9 +48,7 @@ if __name__ == "__main__":
     ]
     for key in list_train_line:
         line = data[key]
-        y0 = np.full(
-            len(line["data"]["x"]), line["start_point"]
-        )  # Преобразуем y0 в массив
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
         x = np.array(line["data"]["x"])
         y = np.array(line["data"]["y"])
 
@@ -76,9 +74,7 @@ if __name__ == "__main__":
     for key in data.keys():
         if key not in list_train_line:
             line = data[key]
-            y0 = np.full(
-                len(line["data"]["x"]), line["start_point"]
-            )  # Преобразуем y0 в массив
+            y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
             x = np.array(line["data"]["x"])
             y = np.array(line["data"]["y"])
 
@@ -117,9 +113,7 @@ if __name__ == "__main__":
         X_curr = np.column_stack((x, y0))
         X_curr_poly = poly_features.transform(X_curr)
         y_curr_pred = poly_reg.predict(X_curr_poly)
-        plt.plot(
-            x, y_curr_pred, label=f"Predicted {key}", linestyle="--", color="black"
-        )
+        plt.plot(x, y_curr_pred, label=f"Predicted {key}", linestyle="--", color="black")
 
     plt.xlabel("x")
     plt.ylabel("y")

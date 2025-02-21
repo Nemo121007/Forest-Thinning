@@ -31,9 +31,7 @@ if __name__ == "__main__":
     # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(
-            len(line["data"]["x"]), line["start_point"]
-        )  # Преобразуем y0 в массив
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
         x = np.array(line["data"]["x"])
         y = np.array(line["data"]["y"])
 
