@@ -4,6 +4,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
+
 """
 search_degree_approximation.py
 
@@ -29,9 +30,9 @@ def evaluate_model_for_degrees(data, degrees):
     all_x, all_y0, all_y = [], [], []
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])
+        x = np.array(line["data"]["x"])
+        y = np.array(line["data"]["y"])
         all_x.extend(x)
         all_y0.extend(y0)
         all_y.extend(y)
@@ -62,7 +63,7 @@ def evaluate_model_for_degrees(data, degrees):
 
 if __name__ == "__main__":
     # Загрузка данных
-    with open('../../data_line/tmp_data_4.json', 'r') as f:
+    with open("../../data_line/tmp_data_4.json", "r") as f:
         data = json.load(f)
 
     # Интервал степеней для проверки
@@ -75,11 +76,11 @@ if __name__ == "__main__":
     degrees, mses, r2s = zip(*results)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(degrees, mses, marker='o', label='MSE', color='red')
-    plt.plot(degrees, r2s, marker='o', label='R^2', color='blue')
-    plt.xlabel('Степень полинома')
-    plt.ylabel('Метрика')
-    plt.title('Зависимость метрик от степени полинома')
+    plt.plot(degrees, mses, marker="o", label="MSE", color="red")
+    plt.plot(degrees, r2s, marker="o", label="R^2", color="blue")
+    plt.xlabel("Степень полинома")
+    plt.ylabel("Метрика")
+    plt.title("Зависимость метрик от степени полинома")
     plt.legend()
     plt.grid()
     plt.show()

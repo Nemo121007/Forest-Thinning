@@ -5,6 +5,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
+
 # Функция для обучения полиномиальной регрессии
 def polynomial_regression_two_vars(X, y, degree):
     """Полиномиальная регрессия от двух переменных заданной степени"""
@@ -19,9 +20,9 @@ def polynomial_regression_two_vars(X, y, degree):
     return poly_reg, poly_features
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open('../../data_line/tmp_data_3.json', 'r') as f:
+    with open("../../data_line/tmp_data_3.json", "r") as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных
@@ -32,9 +33,11 @@ if __name__ == '__main__':
     # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])  # Преобразуем y0 в массив
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
+        y0 = np.full(
+            len(line["data"]["x"]), line["start_point"]
+        )  # Преобразуем y0 в массив
+        x = np.array(line["data"]["x"])
+        y = np.array(line["data"]["y"])
 
         # Сохранение данных
         all_x.extend(x)
@@ -61,24 +64,22 @@ if __name__ == '__main__':
     print(f"Общий R2 для всех графиков: {r2_total}")
 
     # Сохранение объектов poly_reg и poly_features в файлы
-    with open('poly_reg.pkl', 'wb') as f:
+    with open("poly_reg.pkl", "wb") as f:
         pickle.dump(poly_reg, f)
 
-    with open('poly_features.pkl', 'wb') as f:
+    with open("poly_features.pkl", "wb") as f:
         pickle.dump(poly_features, f)
 
     print("Модель и полиномиальные признаки сохранены в файлы.")
 
     # Восстановление объектов из файлов
-    with open('poly_reg.pkl', 'rb') as f:
+    with open("poly_reg.pkl", "rb") as f:
         loaded_poly_reg = pickle.load(f)
 
-    with open('poly_features.pkl', 'rb') as f:
+    with open("poly_features.pkl", "rb") as f:
         loaded_poly_features = pickle.load(f)
 
     print("Модель и полиномиальные признаки восстановлены из файлов.")
-
-
 
     # Предсказание с использованием восстановленной модели
     # Оценка модели на основе исходных данных

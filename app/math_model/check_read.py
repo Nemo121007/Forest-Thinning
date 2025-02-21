@@ -4,9 +4,9 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open('../../data_line/tmp_data_3.json', 'r') as f:
+    with open("../../data_line/tmp_data_3.json", "r") as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных
@@ -17,9 +17,11 @@ if __name__ == '__main__':
     # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])  # Преобразуем y0 в массив
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
+        y0 = np.full(
+            len(line["data"]["x"]), line["start_point"]
+        )  # Преобразуем y0 в массив
+        x = np.array(line["data"]["x"])
+        y = np.array(line["data"]["y"])
 
         # Сохранение данных
         all_x.extend(x)
@@ -31,10 +33,10 @@ if __name__ == '__main__':
     y = np.array(all_y)
 
     # Восстановление объектов из файлов
-    with open('poly_reg.pkl', 'rb') as f:
+    with open("poly_reg.pkl", "rb") as f:
         loaded_poly_reg = pickle.load(f)
 
-    with open('poly_features.pkl', 'rb') as f:
+    with open("poly_features.pkl", "rb") as f:
         loaded_poly_features = pickle.load(f)
 
     print("Модель и полиномиальные признаки восстановлены из файлов.")

@@ -3,19 +3,33 @@ name = "forestthinning"
 version = "0.1.0"
 description = "Development of a software system that, based on input data (breed, volume, etc.), forms a logging plan for forest care (logging volume, frequency)"
 authors = [
-    {name = "Gashkov Saveliy",email = "120210549+Nemo121007@users.noreply.github.com"}
+    { name = "Gashkov Saveliy", email = "120210549+Nemo121007@users.noreply.github.com" }
 ]
-license = {text = "MIT"}
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "numpy (>=2.2.2,<3.0.0)",
     "pandas (>=2.2.3,<3.0.0)",
     "matplotlib (>=3.10.0,<4.0.0)",
-    "scikit-learn (>=1.6.1,<2.0.0)"
+    "scikit-learn (>=1.6.1,<2.0.0)",
+    "black (>=25.1.0,<26.0.0)"
 ]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.7"
+pre-commit = "^4.1.0"
+
+# Автоматическая установка pre-commit хуков через плагин poetry-plugin-hook
+[tool.poetry-plugin-hook.scripts]
+post_install = "pre-commit install"
+
+[tool.ruff]
+line-length = 120

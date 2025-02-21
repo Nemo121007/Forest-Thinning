@@ -18,9 +18,9 @@ def polynomial_regression_two_vars(X, y, degree):
     return poly_reg, poly_features
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open('../data_line/tmp_data_3.json', 'r') as f:
+    with open("../data_line/tmp_data_3.json", "r") as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных
@@ -31,9 +31,11 @@ if __name__ == '__main__':
     # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])  # Преобразуем y0 в массив
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
+        y0 = np.full(
+            len(line["data"]["x"]), line["start_point"]
+        )  # Преобразуем y0 в массив
+        x = np.array(line["data"]["x"])
+        y = np.array(line["data"]["y"])
 
         # Сохранение данных
         all_x.extend(x)
@@ -65,20 +67,21 @@ if __name__ == '__main__':
     # Отображаем исходные данные для всех графиков
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line['data']['x']), line['start_point'])
-        x = np.array(line['data']['x'])
-        y = np.array(line['data']['y'])
-        plt.scatter(x, y, alpha=0.5, label=f'Original {key}')
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])
+        x = np.array(line["data"]["x"])
+        y = np.array(line["data"]["y"])
+        plt.scatter(x, y, alpha=0.5, label=f"Original {key}")
 
         # Предсказания на основе общей модели для текущего графика
         X_curr = np.column_stack((x, y0))
         X_curr_poly = poly_features.transform(X_curr)
         y_curr_pred = poly_reg.predict(X_curr_poly)
-        plt.plot(x, y_curr_pred, label=f'Predicted {key}', linestyle='--')
+        plt.plot(x, y_curr_pred, label=f"Predicted {key}", linestyle="--")
 
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.xlabel("x")
+    plt.ylabel("y")
     plt.title(
-        f'Полиномиальная регрессия (степень {degree}) для всех графиков\nMSE: {mse_total:.4f}, R2: {r2_total:.4f}')
+        f"Полиномиальная регрессия (степень {degree}) для всех графиков\nMSE: {mse_total:.4f}, R2: {r2_total:.4f}"
+    )
     plt.legend()
     plt.show()

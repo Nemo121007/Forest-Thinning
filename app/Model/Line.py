@@ -12,21 +12,27 @@ class Line:
     _right_border: float
     _spline_model: UnivariateSpline
 
-    def __init__(self,
-                 list_polynomial_features: List[PolynomialFeatures] = None,
-                 list_polynomial_regression: List[LinearRegression] = None,
-                 name: str = None,
-                 X: list = None,
-                 Y: list = None,
-                 start_parameter: List[float] = None):
+    def __init__(
+        self,
+        list_polynomial_features: List[PolynomialFeatures] = None,
+        list_polynomial_regression: List[LinearRegression] = None,
+        name: str = None,
+        X: list = None,
+        Y: list = None,
+        start_parameter: List[float] = None,
+    ):
         if (X is not None) or (Y is not None) or (start_parameter is not None):
             if (X is None) or (Y is None) or (start_parameter is None):
                 raise ValueError("X, Y, and start_parameter must all be provided")
             elif len(X) != len(Y):
-                raise ValueError('Incorrect len X or Y')
+                raise ValueError("Incorrect len X or Y")
         # Инициализация атрибутов экземпляра
-        self.list_polynomial_features: List[PolynomialFeatures] = list_polynomial_features or []
-        self.list_polynomial_regression: List[LinearRegression] = list_polynomial_regression or []
+        self.list_polynomial_features: List[PolynomialFeatures] = (
+            list_polynomial_features or []
+        )
+        self.list_polynomial_regression: List[LinearRegression] = (
+            list_polynomial_regression or []
+        )
         self.name: str = name
         self.X: np.array = np.array(X) if X else None
         self.Y: np.array = np.array(Y) if Y else None
@@ -41,19 +47,21 @@ class Line:
             self._left_border = X[0]
             self._right_border = X[-1]
 
-    def load_data(self,
-                  list_polynomial_features: List[PolynomialFeatures] = None,
-                  list_polynomial_regression: List[LinearRegression] = None,
-                  name: str = None,
-                  X: list[float] = None,
-                  Y: list[float] = None,
-                  start_parameter: float = None):
+    def load_data(
+        self,
+        list_polynomial_features: List[PolynomialFeatures] = None,
+        list_polynomial_regression: List[LinearRegression] = None,
+        name: str = None,
+        X: list[float] = None,
+        Y: list[float] = None,
+        start_parameter: float = None,
+    ):
         """Метод для загрузки данных в экземпляр класса Line"""
         if (X is not None) or (Y is not None) or (start_parameter is not None):
             if (X is None) or (Y is None) or (start_parameter is None):
                 raise ValueError("X, Y, and start_parameter must all be provided")
             elif len(X) != len(Y):
-                raise ValueError('Incorrect len X or Y')
+                raise ValueError("Incorrect len X or Y")
 
         if list_polynomial_features is not None:
             self.list_polynomial_features = list_polynomial_features
@@ -77,10 +85,7 @@ class Line:
 
         self._recalculate_borders()
 
-    def append_data(self,
-                    X: list[float],
-                    Y: list[float],
-                    start_parameter: float):
+    def append_data(self, X: list[float], Y: list[float], start_parameter: float):
         """
         Добавляет новые данные к текущим массивам X, Y и start_parameter.
 
@@ -94,7 +99,7 @@ class Line:
             if (X is None) or (Y is None) or (start_parameter is None):
                 raise ValueError("X, Y, and start_parameter must all be provided")
             elif len(X) != len(Y):
-                raise ValueError('Incorrect len X or Y')
+                raise ValueError("Incorrect len X or Y")
 
         # Преобразуем списки в массивы NumPy
         x = np.array(X)
@@ -104,7 +109,9 @@ class Line:
         # Объединяем существующие данные с новыми
         self.X = np.concatenate((self.X, x))
         self.Y = np.concatenate((self.Y, y))
-        self.start_parameter = np.concatenate((self.start_parameter, new_start_parameter))
+        self.start_parameter = np.concatenate(
+            (self.start_parameter, new_start_parameter)
+        )
 
         # Сортируем данные по X
         sorted_indices = np.argsort(self.X)
@@ -136,13 +143,13 @@ class Line:
 
     def fit_regression(self):
         if self.start_parameter is None or len(self.start_parameter) == 0:
-            raise ValueError('Incorrect value start_parameter')
+            raise ValueError("Incorrect value start_parameter")
         if self.X is None or len(self.X) == 0:
-            raise ValueError('Incorrect value X')
+            raise ValueError("Incorrect value X")
         if self.Y is None or len(self.Y) == 0:
-            raise ValueError('Incorrect value Y')
+            raise ValueError("Incorrect value Y")
         if len(self.X) != len(self.Y):
-            raise ValueError('The size does not match X and Y')
+            raise ValueError("The size does not match X and Y")
 
         degree = 5  # Задаем степень полинома
 
@@ -150,17 +157,32 @@ class Line:
 
         # Формируем список сегментов с перекрытием
         segments = [
-            (self.X[max(0, self._borders[i] - overlap):min(len(self.X), self._borders[i + 1] + overlap)],
-             self.Y[max(0, self._borders[i] - overlap):min(len(self.Y), self._borders[i + 1] + overlap)],
-             self.start_parameter[
-             max(0, self._borders[i] - overlap):min(len(self.start_parameter), self._borders[i + 1] + overlap)])
+            (
+                self.X[
+                    max(0, self._borders[i] - overlap) : min(
+                        len(self.X), self._borders[i + 1] + overlap
+                    )
+                ],
+                self.Y[
+                    max(0, self._borders[i] - overlap) : min(
+                        len(self.Y), self._borders[i + 1] + overlap
+                    )
+                ],
+                self.start_parameter[
+                    max(0, self._borders[i] - overlap) : min(
+                        len(self.start_parameter), self._borders[i + 1] + overlap
+                    )
+                ],
+            )
             for i in range(len(self._borders) - 1)
         ]
 
         # Обучаем модели для каждого сегмента
         for x_segment, y_segment, start_segment in segments:
             x_combined = np.column_stack((x_segment, start_segment))
-            polynomial_reg, polynomial_features = self._polynomial_regression_two_vars(x_combined, y_segment, degree)
+            polynomial_reg, polynomial_features = self._polynomial_regression_two_vars(
+                x_combined, y_segment, degree
+            )
             self.list_polynomial_regression.append(polynomial_reg)
             self.list_polynomial_features.append(polynomial_features)
 
@@ -173,7 +195,7 @@ class Line:
         :return: Предсказанное значение y (число).
         """
         if not (self._left_border <= x <= self._right_border):
-            raise ValueError('x is out of range')
+            raise ValueError("x is out of range")
 
         combined_x = np.array([[x, start_point]])
 

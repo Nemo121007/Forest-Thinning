@@ -16,18 +16,18 @@ class Graph:
         self.dict_test: Dict[str, Line] = {}
 
     def load_graph_in_tar(self, name_file: str):
-        tar_path = f'../../data_line/{name_file}.tar'
+        tar_path = f"../../data_line/{name_file}.tar"
 
         try:
-            with tarfile.open(tar_path, 'r') as tar_ref:
-                file_member = tar_ref.getmember(f'{name_file}/wpd.json')
+            with tarfile.open(tar_path, "r") as tar_ref:
+                file_member = tar_ref.getmember(f"{name_file}/wpd.json")
                 with tar_ref.extractfile(file_member) as file:
                     data = json.load(file)
-                if 'datasetColl' not in data:
+                if "datasetColl" not in data:
                     raise KeyError("Key 'datasetColl' is missing in the JSON data")
 
-                data_list = list(data['datasetColl'])
-                data_list.sort(key=lambda x: x['name'])
+                data_list = list(data["datasetColl"])
+                data_list.sort(key=lambda x: x["name"])
 
                 for i in range(len(data_list)):
                     line = data_list[i]
@@ -45,41 +45,49 @@ class Graph:
         all_y = []
 
         # Извлечение данных для текущей линии
-        for item in line['data']:
-            all_x.append(item['value'][0])
-            all_y.append(item['value'][1])
+        for item in line["data"]:
+            all_x.append(item["value"][0])
+            all_y.append(item["value"][1])
 
         if len(all_x) != len(all_y):
-            raise ValueError('The number of arguments X and Y does not match')
+            raise ValueError("The number of arguments X and Y does not match")
 
         item = Line()
-        if re.match(r'growth line \d+', line['name']):
-            item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_y[0])
-        elif re.match(r'recovery line \d+', line['name']):
-            item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=all_x[0])
+        if re.match(r"growth line \d+", line["name"]):
+            item.load_data(
+                name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0]
+            )
+        elif re.match(r"recovery line \d+", line["name"]):
+            item.load_data(
+                name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0]
+            )
         else:
-            item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
-        self.dict_test[line['name']] = item
+            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
+        self.dict_test[line["name"]] = item
 
         item = Line()
         # Сохраняем данные в словарь
-        if re.match(r'growth line \d+', line['name']):
-            if 'growth line' in self.dict_line:
-                item = self.dict_line['growth line']
+        if re.match(r"growth line \d+", line["name"]):
+            if "growth line" in self.dict_line:
+                item = self.dict_line["growth line"]
                 item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
             else:
-                item.load_data(name='growth line', X=all_x, Y=all_y, start_parameter=all_y[0])
-                self.dict_line['growth line'] = item
-        elif re.match(r'recovery line \d+', line['name']):
-            if 'recovery line' in self.dict_line:
-                item = self.dict_line['recovery line']
+                item.load_data(
+                    name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0]
+                )
+                self.dict_line["growth line"] = item
+        elif re.match(r"recovery line \d+", line["name"]):
+            if "recovery line" in self.dict_line:
+                item = self.dict_line["recovery line"]
                 item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
             else:
-                item.load_data(name='recovery line', X=all_x, Y=all_y, start_parameter=all_x[0])
-                self.dict_line['recovery line'] = item
+                item.load_data(
+                    name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0]
+                )
+                self.dict_line["recovery line"] = item
         else:
-            item.load_data(name=line['name'], X=all_x, Y=all_y, start_parameter=0)
-            self.dict_line[line['name']] = item
+            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
+            self.dict_line[line["name"]] = item
 
     def fit_models(self):
         for key, item in self.dict_line.items():
@@ -93,38 +101,44 @@ class Graph:
 
         max_different = 0
         for key, item in self.dict_test.items():
-            plt.plot(item.X, item.Y, alpha=0.5, label=f'Original {key}', color='blue')
+            plt.plot(item.X, item.Y, alpha=0.5, label=f"Original {key}", color="blue")
 
-            symbol = ''
+            symbol = ""
             list_change_symbol = []
 
             list_predict = []
             for i in range(len(item.X)):
-                if re.match(r'growth line \d+', item.name):
-                    model = self.dict_line['growth line']
-                elif re.match(r'recovery line \d+', item.name):
-                    model = self.dict_line['recovery line']
+                if re.match(r"growth line \d+", item.name):
+                    model = self.dict_line["growth line"]
+                elif re.match(r"recovery line \d+", item.name):
+                    model = self.dict_line["recovery line"]
                 else:
                     model = self.dict_line[item.name]
                 y_predict = model.predict_value(item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
-                if different > 0 and symbol != '+' and abs(different) > 0.1:
-                    symbol = '+'
+                if different > 0 and symbol != "+" and abs(different) > 0.1:
+                    symbol = "+"
                     list_change_symbol.append((item.X[i], different, symbol))
-                    plt.scatter(item.X[i], y_predict, color='red', label='Точки')
-                elif different < 0 and symbol != '-' and abs(different) > 0.1:
-                    symbol = '-'
+                    plt.scatter(item.X[i], y_predict, color="red", label="Точки")
+                elif different < 0 and symbol != "-" and abs(different) > 0.1:
+                    symbol = "-"
                     list_change_symbol.append((item.X[i], different, symbol))
-                    plt.scatter(item.X[i], y_predict, color='red', label='Точки')
+                    plt.scatter(item.X[i], y_predict, color="red", label="Точки")
                 if max_different < abs(different):
                     max_different = abs(different)
-            with open(f'tmp_cache/{item.name}.json', 'w') as f:
+            with open(f"tmp_cache/{item.name}.json", "w") as f:
                 json.dump(list_change_symbol, f)
-                print(f'Количество перегибов {item.name}: {len(list_change_symbol)}')
+                print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
 
-            plt.plot(item.X, list_predict, label=f'Predicted {key}', linestyle='--', color='black')
+            plt.plot(
+                item.X,
+                list_predict,
+                label=f"Predicted {key}",
+                linestyle="--",
+                color="black",
+            )
 
             mse_total = mean_squared_error(item.Y, list_predict)
             r2_total = r2_score(item.Y, list_predict)
@@ -132,13 +146,13 @@ class Graph:
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
-        print(f'Максимальная ошибка при аппроксимации: {max_different}')
+        print(f"Максимальная ошибка при аппроксимации: {max_different}")
         plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     a = Graph()
-    a.load_graph_in_tar('pine_sorrel')
+    a.load_graph_in_tar("pine_sorrel")
     # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
