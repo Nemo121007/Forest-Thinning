@@ -6,6 +6,7 @@ visualization_approximation_single_variable.py
 """
 
 import json
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -135,8 +136,9 @@ def rational_polynomial_function(x, y, degree):
 
 
 if __name__ == "__main__":
+    file_path = Path(__file__).parent.parent.parent / "data_line" / "pine_sorrel" / "tmp_data_1.json"
     # Загрузка JSON-данных из файла
-    with open("../../data_line/tmp_data_1.json", "r") as f:
+    with open(file_path, "r") as f:
         data = json.load(f)
 
     # Преобразование в DataFrame

@@ -1,5 +1,5 @@
 [project]
-name = "forestthinning"
+name = "forest_thinning"
 version = "0.1.0"
 description = "Development of a software system that, based on input data (breed, volume, etc.), forms a logging plan for forest care (logging volume, frequency)"
 authors = [
