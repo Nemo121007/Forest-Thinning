@@ -6,6 +6,7 @@ visualization_approximation_all_line.py
 """
 
 import json
+from pathlib import Path
 import numpy as np
 import re
 import matplotlib.pyplot as plt
@@ -37,7 +38,9 @@ if __name__ == "__main__":
         "economic min line",
     ]
     # Загрузка JSON-данных из файла
-    with open("../../data_line/tmp_data_all_line.json", "r") as f:
+    tar_path = Path(__file__).parent
+    tar_path = tar_path.parent.parent / "data_line" / "tmp_data_all_line.json"
+    with open(tar_path, "r") as f:
         data = json.load(f)
 
     # Построение графиков

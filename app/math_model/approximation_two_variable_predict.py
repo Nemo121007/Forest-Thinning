@@ -7,6 +7,7 @@ approximation_two_variable_predict.py
 """
 
 import json
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
@@ -29,7 +30,9 @@ def polynomial_regression_two_vars(X, y, degree):
 
 if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open("../../data_line/tmp_data_4.json", "r") as f:
+    tar_path = Path(__file__).parent
+    tar_path = tar_path.parent.parent / "data_line" / "tmp_data_all_line.json"
+    with open(tar_path, "r") as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных

@@ -4,10 +4,10 @@ __pycache__/
 
 *__pycache__*
 
+*_cache*
+
 .idea/
 
 *.py[cod]
-
-tmp_abc.py
 
 tmp_*
