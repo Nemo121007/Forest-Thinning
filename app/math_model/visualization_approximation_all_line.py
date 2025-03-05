@@ -1,8 +1,7 @@
-"""
-visualization_approximation_all_line.py
+"""visualization_approximation_all_line.py.
 
-Описание:
-    Данный файл содержит код для расчёта полиномиальной регрессии от двух переменных для всех графиков 1 изображения
+Description:
+    This file contains code for calculating polynomial regression from two variables for all graphs 1 image
 """
 
 import json
@@ -15,13 +14,19 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
 
 
-def polynomial_regression_two_vars(X, y, degree):
-    """Полиномиальная регрессия от двух переменных заданной степени"""
-    # Создаем полиномиальные признаки для двух переменных
+def polynomial_regression_two_vars(X: list[float], y: list[float], degree: int) -> tuple:
+    """Polynomial regression two vars given degree.
+
+    Args:
+        X (list[float]): list of x values
+        y (list[float]): list of y values
+        degree (int): degree of polynomial
+    Returns:
+        tuple: tuple of polynomial regression and polynomial features
+    """
     poly_features = PolynomialFeatures(degree=degree)
     X_poly = poly_features.fit_transform(X)
 
-    # Линейная регрессия на полиномиальных признаках
     poly_reg = LinearRegression()
     poly_reg.fit(X_poly, y)
 
@@ -40,7 +45,7 @@ if __name__ == "__main__":
     # Загрузка JSON-данных из файла
     tar_path = Path(__file__).parent
     tar_path = tar_path.parent.parent / "data_line" / "tmp_data_all_line.json"
-    with open(tar_path, "r") as f:
+    with open(tar_path) as f:
         data = json.load(f)
 
     # Построение графиков

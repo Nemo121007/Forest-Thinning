@@ -1,3 +1,5 @@
+"""Module for polynomial regression two vars given degree."""
+
 import json
 import pickle
 import numpy as np
@@ -6,14 +8,19 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
 
-# Функция для обучения полиномиальной регрессии
-def polynomial_regression_two_vars(X, y, degree):
-    """Полиномиальная регрессия от двух переменных заданной степени"""
-    # Создаем полиномиальные признаки для двух переменных
+def polynomial_regression_two_vars(X: list[float], y: list[float], degree: int) -> tuple:
+    """Polynomial regression two vars given degree.
+
+    Args:
+        X (list[float]): list of x values
+        y (list[float]): list of y values
+        degree (int): degree of polynomial
+    Returns:
+        tuple: tuple of polynomial regression and polynomial features
+    """
     poly_features = PolynomialFeatures(degree=degree)
     X_poly = poly_features.fit_transform(X)
 
-    # Линейная регрессия на полиномиальных признаках
     poly_reg = LinearRegression()
     poly_reg.fit(X_poly, y)
 
@@ -21,28 +28,23 @@ def polynomial_regression_two_vars(X, y, degree):
 
 
 if __name__ == "__main__":
-    # Загрузка JSON-данных из файла
-    with open("../../data_line/tmp_data_3.json", "r") as f:
+    with open("../../data_line/tmp_data_3.json") as f:
         data = json.load(f)
 
-    # Переменные для накопления всех данных
     all_x = []
     all_y0 = []
     all_y = []
 
-    # Накопление всех данных для построения общей модели
     for key in data.keys():
         line = data[key]
-        y0 = np.full(len(line["data"]["x"]), line["start_point"])  # Преобразуем y0 в массив
+        y0 = np.full(len(line["data"]["x"]), line["start_point"])
         x = np.array(line["data"]["x"])
         y = np.array(line["data"]["y"])
 
-        # Сохранение данных
         all_x.extend(x)
         all_y0.extend(y0)
         all_y.extend(y)
 
-    # Конвертируем в numpy массивы для модели
     X = np.column_stack((all_x, all_y0))
     y = np.array(all_y)
 

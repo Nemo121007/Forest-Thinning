@@ -27,9 +27,30 @@ package-mode = false
 ruff = "^0.9.7"
 pre-commit = "^4.1.0"
 
-# Автоматическая установка pre-commit хуков через плагин poetry-plugin-hook
 [tool.poetry-plugin-hook.scripts]
 post_install = "pre-commit install"
 
 [tool.ruff]
 line-length = 120
+select = [
+    "F",        # pyflakes
+    "E",        # pycodestyle errors
+    "W",        # pycodestyle warnings
+    "ANN",      # flake8-annotations (type hints)
+    "TCH",      # typing-checker
+    "UP",       # pyupgrade
+    "PYI",      # flake8-pyi
+    "TCH",      # typing-checker
+    "D",        # pydocstyle
+]
+
+[tool.ruff.pyupgrade]
+keep-runtime-typing = true
+
+[tool.ruff.flake8-annotations]
+allow-star-arg-any = true
+mypy-init-return = true
+suppress-none-returning = true
+
+[tool.ruff.pydocstyle]
+convention = "google"

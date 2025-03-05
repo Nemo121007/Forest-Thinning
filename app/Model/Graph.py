@@ -1,7 +1,8 @@
+"""Module for working with graphs."""
+
 import json
 import tarfile
 import re
-from typing import Dict
 
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
@@ -10,12 +11,47 @@ from app.Model.Line import Line
 
 
 class Graph:
+    """Class for working with graphs.
+
+    Attributes:
+        dict_line (dict[str, Line]): dictionary of lines
+        dict_model (dict): dictionary of models
+        dict_test (dict[str, Line]): dictionary of test lines
+
+    Methods:
+        load_graph_in_tar(name_file: str): Load graph data from a tar file
+        _load_data_line(line: dict): Load data line
+        fit_models(): Fit regression models for all lines
+        check_graph(): Check the graph for the correctness of the approximation
+
+    Raises:
+        FileNotFoundError: File not found
+        KeyError: Key error
+        ValueError: Value error
+    """
+
     def __init__(self):
-        self.dict_line: Dict[str, Line] = {}
+        """Constructor.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        self.dict_line: dict[str, Line] = {}
         self.dict_model = {}
-        self.dict_test: Dict[str, Line] = {}
+        self.dict_test: dict[str, Line] = {}
 
     def load_graph_in_tar(self, name_file: str):
+        """Load graph data from a tar file.
+
+        Args:
+            name_file (str): name of the tar file
+
+        Returns:
+            None
+        """
         tar_path = f"../../data_line/{name_file}.tar"
 
         try:
@@ -40,7 +76,7 @@ class Graph:
         except ValueError as e:
             raise ValueError(f"Value error: {e}")
 
-    def _load_data_line(self, line: Dict):
+    def _load_data_line(self, line: dict):
         all_x = []
         all_y = []
 
@@ -82,6 +118,14 @@ class Graph:
             self.dict_line[line["name"]] = item
 
     def fit_models(self):
+        """Fit regression models for all lines.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         for key, item in self.dict_line.items():
             try:
                 item.fit_regression()
@@ -89,6 +133,14 @@ class Graph:
                 print(f"Error fitting regression for {key}: {e}")
 
     def check_graph(self):
+        """Check the graph for the correctness of the approximation.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         plt.figure(figsize=(15, 10))
 
         max_different = 0

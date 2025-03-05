@@ -1,24 +1,26 @@
+"""Module Reader."""
+
 import json
 import os.path
+from pathlib import Path
 import tarfile
 import re
 
 
 class Reader:
-    """
-    Статический класс Reader.
+    """Static class Reader.
 
-    Назначение:
-        Этот класс предоставляет методы для чтения данных для построения полиномов графиков, а также
-        генерирует и кеширует эти данные по адресу './' при первом обращении к ним:
-        - Генерирует данные для построения полиномов, по которым строятся графики
-        - Сохраняет и читает их из коллекции, расположенной в
+    Class provides methods for reading data for building graphics polynomials,
+    as well as generating and caching this data at './' address when first accessed:
+    - Generates data for building polynomials on which graphics are built
+    - Saves and reads them from a collection located in
 
-    Методы:
-        - read_text_file(file_path): Читает содержимое текстового файла.
-        - read_json_file(file_path): Читает и парсит JSON-файл.
-        - read_csv_file(file_path): Читает CSV-файл и возвращает содержимое.
-        - read_from_string(data): Обрабатывает данные, переданные в виде строки.
+    Attributes:
+        _dict_data_graphics: dict: dictionary with data for graphics
+        _file_path_cache: str: path to the cache file
+        _dir_path_data: str: path to the data directory
+        _list_name_graphics: list: list of graphic names
+        _list_unique_name_group_line: list: list of unique line names
     """
 
     _dict_data_graphics = None
@@ -40,7 +42,7 @@ class Reader:
             if Reader._dict_data_graphics is None:
                 if os.path.isfile(Reader._file_path_cache):
                     print("Cache file detected")
-                    with open(Reader._file_path_cache, "r") as f:
+                    with open(Reader._file_path_cache) as f:
                         Reader._dict_data_graphics = json.load(f)
                         if not isinstance(Reader._dict_data_graphics, dict):
                             raise ValueError("Cached data is not a dictionary")
@@ -75,7 +77,7 @@ class Reader:
             raise RuntimeError(f"Error in _initialize_graphics_data(): {e}") from e
 
     @staticmethod
-    def _generate_data_graphics(name_file_in_disk: str):
+    def _generate_data_graphics(name_file_in_disk: str) -> tuple:
         tar_path = f"../../data_line/{name_file_in_disk}.tar"
         with tarfile.open(tar_path, "r") as tar_ref:
             # Открыть файл из архива на чтение
@@ -100,21 +102,21 @@ class Reader:
         return {"a": "a"}
 
     @staticmethod
-    def read_text_file(file_path):
-        """
-        Читает содержимое текстового файла.
+    def read_text_file(file_path: Path) -> dict:
+        """Reads the contents of a text file.
 
-        Args:
-            file_path (str): Путь к файлу.
-
-        Returns:
-            str: Содержимое файла.
+        :param file_path: Path: path to the file
+        :return: dict: file content
         """
-        with open(file_path, "r", encoding="utf-8") as file:
+        with open(file_path, encoding="utf-8") as file:
             return file.read()
 
     @staticmethod
-    def test():
+    def test() -> None:
+        """Test method.
+
+        :return: None
+        """
         Reader._initialize_graphics_data()
 
 

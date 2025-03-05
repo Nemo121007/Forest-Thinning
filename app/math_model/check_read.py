@@ -1,3 +1,5 @@
+"""Module for checking the reading of the model from files."""
+
 import json
 import pickle
 import numpy as np
@@ -6,7 +8,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open("../../data_line/tmp_data_3.json", "r") as f:
+    with open("../../data_line/tmp_data_3.json") as f:
         data = json.load(f)
 
     # Переменные для накопления всех данных

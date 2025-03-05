@@ -1,9 +1,7 @@
-"""
-write_data.py
+"""write_data.py.
 
-Описание:
-    Данный файл содержит код для переписывания данных из архива .tar в промежуточные файлы tmp_data_d+ для
-    дальнейшего анализа
+Description:
+    File contains function rewrite data in archive  .tar in temp file tmp_data_d+
 """
 
 import json
@@ -14,11 +12,17 @@ from pathlib import Path
 
 
 def main_all_line():
-    """Запись данных о всех линиях из графиков в tmp_data_all_line.json"""
+    """Write data on data all lines in graphics in tmp_data_all_line.json.
+
+    Args:
+        None
+    Returns:
+        None
+    """
     # Путь к архиву
     tar_path = Path(__file__).parent
     tar_path = tar_path.parent.parent / "data_line" / "pine_sorrel.tar"
-    
+
     # tar_path = "../../data_line/pine_sorrel.tar"
 
     # Распаковка архива и чтение файлов

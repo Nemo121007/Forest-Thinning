@@ -1,3 +1,5 @@
+"""Main module."""
+
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +10,15 @@ from sklearn.metrics import mean_squared_error, r2_score
 from scipy.optimize import curve_fit
 
 
-def linear_regression(x, y):
+def linear_regression(x: list[float], y: list[float]) -> list[float]:
+    """Linear regression.
+
+    Args:
+        x (list[float]): list of x values
+        y (list[float]): list of y values
+    Returns:
+        list[float]: list of predicted y values
+    """
     lin_reg = LinearRegression()
     lin_reg.fit(x.reshape(-1, 1), y)
     y_predict = lin_reg.predict(x.reshape(-1, 1))
@@ -21,14 +31,22 @@ def linear_regression(x, y):
     return y_predict
 
 
-def polynomial_regression_degree(x, y, degree):
+def polynomial_regression_degree(x: list[float], y: list[float], degree: int) -> list[float]:
+    """Polynomial regression given degree.
+
+    Args:
+        x (list[float]): list of x values
+        y (list[float]): list of y values
+        degree (int): degree of polynomial
+    Returns:
+        list[float]: list of predicted y values
+    """
     poly_features = PolynomialFeatures(degree=degree)
     x_poly = poly_features.fit_transform(x.reshape(-1, 1))
     poly_reg = LinearRegression()
     poly_reg.fit(x_poly, y)
     y_pred = poly_reg.predict(x_poly)
 
-    # Вычисление метрик
     mse = mean_squared_error(y, y_pred)
     r2 = r2_score(y, y_pred)
     print(f"Полиномиальная регрессия (степень {degree}) — MSE: {mse}, R2: {r2}")
@@ -36,13 +54,20 @@ def polynomial_regression_degree(x, y, degree):
     return y_pred
 
 
-# Экспоненциальная функция
-def _exponential_model(x, a, b, c):
+def _exponential_model(x: float, a: float, b: float, c: float) -> float:
     return a * np.exp(b * x) + c
 
 
-def exponential_approximation(x, y):
-    # Подбор параметров
+def exponential_approximation(x: list[float], y: list[float]) -> list[float]:
+    """Exponential approximation.
+
+    Args:
+        x (list[float]): list of x values
+        y (list[float]): list of y values
+
+    Returns:
+        list[float]: list of predicted y values
+    """
     try:
         popt, _ = curve_fit(_exponential_model, x, y, maxfev=10000)
         y_pred = _exponential_model(x, *popt)
@@ -59,7 +84,7 @@ def exponential_approximation(x, y):
 
 if __name__ == "__main__":
     # Загрузка JSON-данных из файла
-    with open("../data_line/tmp_data_1.json", "r") as f:
+    with open("../data_line/tmp_data_1.json") as f:
         data = json.load(f)
 
     # Преобразование в DataFrame
