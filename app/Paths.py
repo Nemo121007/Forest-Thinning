@@ -1,11 +1,12 @@
-from dataclasses import dataclass, field
+"""Dataclass."""
+
+from dataclasses import dataclass
 from pathlib import Path
+
 
 @dataclass
 class Paths:
-    root: Path = Path(__file__).parent  
-    DATA_DIRECTORY: Path = field(init=False)
+    """Dataclass."""
 
-    def __post_init__(self):
-        self.DATA_DIRECTORY = self.root / "data_line"
-        
+    ROOT: Path = Path(__file__).parent
+    DATA_DIRECTORY: Path = ROOT / "data_line"
