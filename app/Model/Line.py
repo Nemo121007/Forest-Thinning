@@ -3,7 +3,6 @@
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-from ..Paths import Paths
 
 
 class Line:
@@ -72,8 +71,8 @@ class Line:
             self.name = name
         if X is not None:
             self.X = np.array(X)
-            self._left_border = X[0]
-            self._right_border = X[-1]
+            self.left_border = X[0]
+            self.right_border = X[-1]
         if Y is not None:
             self.Y = np.array(Y)
         if (start_parameter is not None) and (X is not None):
@@ -106,8 +105,8 @@ class Line:
         self.start_parameter = self.start_parameter[sorted_indices]
 
         # Update borders
-        self._left_border = float(self.X[0])
-        self._right_border = float(self.X[-1])
+        self.left_border = float(self.X[0])
+        self.right_border = float(self.X[-1])
 
     def fit_regression(self):
         """Fit a single regression model to all data."""
@@ -131,7 +130,7 @@ class Line:
 
     def predict_value(self, x: float, start_point: float) -> float:
         """Predicts the value of y based on x and the starting parameter."""
-        if not (self._left_border <= x <= self._right_border):
+        if not (self.left_border <= x <= self.right_border):
             raise ValueError("x is out of range")
 
         # Combine input x and start_point
@@ -144,34 +143,34 @@ class Line:
         y = self.polynomial_regression.predict(x_poly)
         return float(y[0])
 
-    def save_model(self) -> dict:
-        """Save model to a file (placeholder).
+    # def save_model(self) -> dict:
+    #     """Save model to a file (placeholder).
 
-        Arg:
-            None
+    #     Arg:
+    #         None
 
-        Returns:
-            dict: Dictionary containing the name of the model and the names of the saved files
-        """
-        path_polynomial_features = Paths.MODEL_DIRECTORY_MODELS / f"{self.name}_polynomial_features.pkl"
-        path_polynomial_regression = Paths.MODEL_DIRECTORY_MODELS / f"{self.name}_polynomial_regression.pkl"
+    #     Returns:
+    #         dict: Dictionary containing the name of the model and the names of the saved files
+    #     """
+    #     path_polynomial_features = Paths.MODEL_DIRECTORY_MODELS / f"{self.name}_polynomial_features.pkl"
+    #     path_polynomial_regression = Paths.MODEL_DIRECTORY_MODELS / f"{self.name}_polynomial_regression.pkl"
 
-        answer_dict = {
-            "name": self.name,
-            "polynomial_features": f"{self.name}_polynomial_features.pkl",
-            "polynomial_regression": f"{self.name}_polynomial_regression.pkl",
-            "left_border": self._left_border,
-            "right_border": self._right_border,
-        }
+    #     answer_dict = {
+    #         "name": self.name,
+    #         "polynomial_features": f"{self.name}_polynomial_features.pkl",
+    #         "polynomial_regression": f"{self.name}_polynomial_regression.pkl",
+    #         "left_border": self._left_border,
+    #         "right_border": self._right_border,
+    #     }
 
-        self.polynomial_features.save(path_polynomial_features)
-        self.polynomial_regression.save(path_polynomial_regression)
-        return answer_dict
+    #     self.polynomial_features.save(path_polynomial_features)
+    #     self.polynomial_regression.save(path_polynomial_regression)
+    #     return answer_dict
 
-    def load_model(self, name: str):
-        """Load model from a file (placeholder)."""
-        path_polynomial_features = Paths.MODEL_DIRECTORY_MODELS / f"{name}_polynomial_features.pkl"
-        path_polynomial_regression = Paths.MODEL_DIRECTORY_MODELS / f"{name}_polynomial_regression.pkl"
+    # def load_model(self, name: str):
+    #     """Load model from a file (placeholder)."""
+    #     path_polynomial_features = Paths.MODEL_DIRECTORY_MODELS / f"{name}_polynomial_features.pkl"
+    #     path_polynomial_regression = Paths.MODEL_DIRECTORY_MODELS / f"{name}_polynomial_regression.pkl"
 
-        self.polynomial_features.load(path_polynomial_features)
-        self.polynomial_regression.load(path_polynomial_regression)
+    #     self.polynomial_features.load(path_polynomial_features)
+    #     self.polynomial_regression.load(path_polynomial_regression)

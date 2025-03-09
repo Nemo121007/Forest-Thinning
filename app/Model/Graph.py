@@ -3,6 +3,7 @@
 import json
 import tarfile
 import re
+import joblib
 
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
@@ -16,7 +17,6 @@ class Graph:
 
     Attributes:
         dict_line (dict[str, Line]): dictionary of lines
-        dict_model (dict): dictionary of models
         dict_test (dict[str, Line]): dictionary of test lines
 
     Methods:
@@ -31,20 +31,21 @@ class Graph:
         ValueError: Value error
     """
 
-    def __init__(self):
+    def __init__(self, name: str) -> None:
         """Constructor.
 
         Args:
-            None
+            name (str): name of the
 
         Returns:
             None
         """
+        self.name: str = name
+        self.file_name: str = f"{name}.tar"
         self.dict_line: dict[str, Line] = {}
-        self.dict_model = {}
         self.dict_test: dict[str, Line] = {}
 
-    def load_graph_in_tar(self, name_file: str):
+    def load_graph_in_tar(self):
         """Load graph data from a tar file.
 
         Args:
@@ -53,11 +54,11 @@ class Graph:
         Returns:
             None
         """
-        tar_path = Paths.DATA_DIRECTORY / f"{name_file}.tar"
+        tar_path = Paths.DATA_DIRECTORY / self.file_name
 
         try:
             with tarfile.open(tar_path, "r") as tar_ref:
-                file_member = tar_ref.getmember(f"{name_file}/wpd.json")
+                file_member = tar_ref.getmember(f"{self.name}/wpd.json")
                 with tar_ref.extractfile(file_member) as file:
                     data = json.load(file)
                 if "datasetColl" not in data:
@@ -89,6 +90,7 @@ class Graph:
         if len(all_x) != len(all_y):
             raise ValueError("The number of arguments X and Y does not match")
 
+        ### Test dict
         item = Line()
         if re.match(r"growth line \d+", line["name"]):
             item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0])
@@ -97,6 +99,7 @@ class Graph:
         else:
             item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
         self.dict_test[line["name"]] = item
+        ### Test dict
 
         item = Line()
         # Сохраняем данные в словарь
@@ -192,12 +195,91 @@ class Graph:
         print(f"Максимальная ошибка при аппроксимации: {max_different}")
         plt.show()
 
+    def save_graph(self):
+        """Save graph data to a tar file.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        info_graph = {
+            "name": self.name,
+            "file_name": self.file_name,
+            "dict_line": {},
+        }
+
+        dict_lines = {}
+        for key, item in self.dict_line.items():
+            line = {
+                "name": item.name,
+                "polynomial_features": f"{item.name}_polynomial_features.pkl",
+                "polynomial_regression": f"{item.name}_polynomial_regression.pkl",
+                "left_border": item.left_border,
+                "right_border": item.right_border,
+            }
+
+            path_graph = Paths.MODEL_DIRECTORY / f"{self.name}"
+            if not path_graph.exists():
+                path_graph.mkdir()
+
+            joblib.dump(item.polynomial_features, path_graph / line["polynomial_features"])
+            joblib.dump(item.polynomial_regression, path_graph / line["polynomial_regression"])
+
+            dict_lines[key] = line
+
+        info_graph["dict_line"] = dict_lines
+
+        json_path = Paths.MODEL_DIRECTORY / f"{self.name}.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(info_graph, f, indent=4, ensure_ascii=False)
+
+    def load_graph(self):
+        """Load graph data from a tar file.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        json_path = Paths.MODEL_DIRECTORY / f"{self.name}.json"
+        with open(json_path, encoding="utf-8") as f:
+            info_graph = json.load(f)
+
+        if self.name != info_graph["name"]:
+            raise ValueError("Error loading graph data")
+
+        self.file_name = info_graph["file_name"]
+
+        dict_lines = info_graph["dict_line"]
+        for key, line in dict_lines.items():
+            name = line["name"]
+            left_border = line["left_border"]
+            right_border = line["right_border"]
+            polynomial_features = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_features"])
+            polynomial_regression = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_regression"])
+
+            item = Line(
+                name=name,
+                left_border=left_border,
+                right_border=right_border,
+                polynomial_features=polynomial_features,
+                polynomial_regression=polynomial_regression,
+            )
+
+            self.dict_line[key] = item
+
 
 if __name__ == "__main__":
-    a = Graph()
-    a.load_graph_in_tar("pine_sorrel")
+    a = Graph("pine_sorrel")
+    a.load_graph_in_tar()
     # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
 
+    a.save_graph()
+    a = Graph("pine_sorrel")
+    a.load_graph()
     print(a)

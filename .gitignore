@@ -13,3 +13,5 @@ __pycache__/
 tmp_*
 
 .vscode/
+
+model_saving/*
