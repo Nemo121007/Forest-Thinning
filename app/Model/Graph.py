@@ -6,6 +6,7 @@ import re
 
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
+from ..Paths import Paths
 
 from app.Model.Line import Line
 
@@ -52,7 +53,7 @@ class Graph:
         Returns:
             None
         """
-        tar_path = f"../../data_line/{name_file}.tar"
+        tar_path = Paths.DATA_DIRECTORY / f"{name_file}.tar"
 
         try:
             with tarfile.open(tar_path, "r") as tar_ref:
@@ -172,9 +173,7 @@ class Graph:
                     plt.scatter(item.X[i], y_predict, color="red", label="Точки")
                 if max_different < abs(different):
                     max_different = abs(different)
-            with open(f"tmp_cache/{item.name}.json", "w") as f:
-                json.dump(list_change_symbol, f)
-                print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
+            print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
 
             plt.plot(
                 item.X,
@@ -200,4 +199,5 @@ if __name__ == "__main__":
     # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.check_graph()
+
     print(a)
