@@ -45,11 +45,11 @@ class Graph:
         self.dict_line: dict[str, Line] = {}
         self.dict_test: dict[str, Line] = {}
 
-    def load_graph_in_tar(self):
+    def load_graph_from_tar(self, test_mark: bool = False):
         """Load graph data from a tar file.
 
         Args:
-            name_file (str): name of the tar file
+            test_mark (bool): test mark
 
         Returns:
             None
@@ -69,7 +69,7 @@ class Graph:
 
                 for i in range(len(data_list)):
                     line = data_list[i]
-                    self._load_data_line(line)
+                    self._load_data_line(line, test_mark)
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {tar_path} not found.")
@@ -78,7 +78,7 @@ class Graph:
         except ValueError as e:
             raise ValueError(f"Value error: {e}")
 
-    def _load_data_line(self, line: dict):
+    def _load_data_line(self, line: dict, test_mark: bool = False):
         all_x = []
         all_y = []
 
@@ -90,36 +90,50 @@ class Graph:
         if len(all_x) != len(all_y):
             raise ValueError("The number of arguments X and Y does not match")
 
-        ### Test dict
         item = Line()
-        if re.match(r"growth line \d+", line["name"]):
-            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0])
-        elif re.match(r"recovery line \d+", line["name"]):
-            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0])
+        if test_mark:
+            if re.match(r"growth line \d+", line["name"]):
+                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0])
+            elif re.match(r"recovery line \d+", line["name"]):
+                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0])
+            else:
+                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
+            self.dict_test[line["name"]] = item
         else:
-            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
-        self.dict_test[line["name"]] = item
-        ### Test dict
+            name = self._rename_line(line["name"])
+            if "growth line" == name:
+                if "growth line" in self.dict_line:
+                    item = self.dict_line["growth line"]
+                    item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
+                else:
+                    item.load_data(name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0])
+                    self.dict_line["growth line"] = item
+            elif "recovery line" == name:
+                if "recovery line" in self.dict_line:
+                    item = self.dict_line["recovery line"]
+                    item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
+                else:
+                    item.load_data(name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0])
+                    self.dict_line["recovery line"] = item
+            else:
+                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
+                self.dict_line[line["name"]] = item
 
-        item = Line()
-        # Сохраняем данные в словарь
-        if re.match(r"growth line \d+", line["name"]):
-            if "growth line" in self.dict_line:
-                item = self.dict_line["growth line"]
-                item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
-            else:
-                item.load_data(name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0])
-                self.dict_line["growth line"] = item
-        elif re.match(r"recovery line \d+", line["name"]):
-            if "recovery line" in self.dict_line:
-                item = self.dict_line["recovery line"]
-                item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
-            else:
-                item.load_data(name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0])
-                self.dict_line["recovery line"] = item
+    def _rename_line(self, name: str) -> str:
+        """Rename the line.
+
+        Args:
+            name (str): name of the line
+
+        Returns:
+            str: new name of the line
+        """
+        if re.match(r"growth line \d+", name):
+            return "growth line"
+        elif re.match(r"recovery line \d+", name):
+            return "recovery line"
         else:
-            item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
-            self.dict_line[line["name"]] = item
+            return name
 
     def fit_models(self):
         """Fit regression models for all lines.
@@ -136,6 +150,22 @@ class Graph:
             except ValueError as e:
                 print(f"Error fitting regression for {key}: {e}")
 
+    def predict(self, name: str, X: float, start_parameter: float = 0) -> float:
+        """Predict the value of the function at the point X.
+
+        Args:
+            name (str): name of the line
+            X (float): point X
+            start_parameter (float): start parameter
+
+        Returns:
+            float: predicted value
+        """
+        if name not in self.dict_line:
+            raise ValueError(f"Line {name} not found")
+        model = self.dict_line[name]
+        return model.predict_value(X, start_parameter)
+
     def check_graph(self):
         """Check the graph for the correctness of the approximation.
 
@@ -145,6 +175,8 @@ class Graph:
         Returns:
             None
         """
+        if not self.dict_test:
+            raise ValueError("Test data is missing")
         plt.figure(figsize=(15, 10))
 
         max_different = 0
@@ -156,13 +188,15 @@ class Graph:
 
             list_predict = []
             for i in range(len(item.X)):
+                name = ""
                 if re.match(r"growth line \d+", item.name):
-                    model = self.dict_line["growth line"]
+                    name = "growth line"
                 elif re.match(r"recovery line \d+", item.name):
-                    model = self.dict_line["recovery line"]
+                    name = "recovery line"
                 else:
-                    model = self.dict_line[item.name]
-                y_predict = model.predict_value(item.X[i], item.start_parameter[i])
+                    name = item.name
+
+                y_predict = self.predict(name, item.X[i], item.start_parameter[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
@@ -176,7 +210,6 @@ class Graph:
                     plt.scatter(item.X[i], y_predict, color="red", label="Точки")
                 if max_different < abs(different):
                     max_different = abs(different)
-            print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
 
             plt.plot(
                 item.X,
@@ -189,6 +222,7 @@ class Graph:
             mse_total = mean_squared_error(item.Y, list_predict)
             r2_total = r2_score(item.Y, list_predict)
 
+            print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
             print(f"{item.name}: Общий R2 для обучающей выборки: {r2_total}")
 
@@ -274,12 +308,16 @@ class Graph:
 
 if __name__ == "__main__":
     a = Graph("pine_sorrel")
-    a.load_graph_in_tar()
+    a.load_graph_from_tar()
     # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
+    a.load_graph_from_tar(test_mark=True)
     a.check_graph()
 
+    print("Check save graph")
     a.save_graph()
     a = Graph("pine_sorrel")
     a.load_graph()
+    a.load_graph_from_tar(test_mark=True)
+    a.check_graph()
     print(a)
