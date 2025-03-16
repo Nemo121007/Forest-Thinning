@@ -1,6 +1,16 @@
 """File with main screen of the application."""
 
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QGridLayout
+from PySide6.QtWidgets import (
+    QApplication,
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QHBoxLayout,
+    QGridLayout,
+    QScrollArea,
+    QSizePolicy,
+)
 from PySide6.QtGui import QColor, QPalette
 import sys
 
@@ -184,17 +194,35 @@ class MainWindow(QWidget):
 
         graphic = QWidget()
         graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
-        graphic.setFixedWidth(800)
+        graphic.setMinimumWidth(600)
+        graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(graphic)
 
-        # Создаем контейнер для блоков информации
+        # Создаем контейнер для блоков информации с прокруткой
         blocks_container = QWidget()
+        blocks_container.setFixedWidth(250)
         blocks_info_layout = QVBoxLayout(blocks_container)
         blocks_info_layout.setContentsMargins(5, 0, 5, 0)
 
-        blocks_info = QWidget()
-        blocks_info.setStyleSheet("background-color: #ffffff; text-align: center;")
-        blocks_info_layout.addWidget(blocks_info)
+        # Создаем виджет с прокруткой
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("background-color: #ffffff;")
+
+        # Создаем контейнер для блоков информации
+        blocks_widget = QWidget()
+        blocks_layout = QVBoxLayout(blocks_widget)
+        blocks_layout.setContentsMargins(5, 5, 5, 5)
+        blocks_layout.setSpacing(5)
+
+        # Добавляем несколько информационных блоков для примера
+        for _ in range(10):  # Создаем 5 блоков
+            info_block = self._create_info_block()
+            blocks_layout.addWidget(info_block)
+
+        # Устанавливаем виджет с блоками в область прокрутки
+        scroll_area.setWidget(blocks_widget)
+        blocks_info_layout.addWidget(scroll_area)
 
         btn_block_info = QPushButton("Добавить блок")
         btn_block_info.setFixedHeight(50)
@@ -205,6 +233,68 @@ class MainWindow(QWidget):
         main.setLayout(main_layout)
 
         return main
+
+    def _create_info_block(self) -> QWidget:
+        """Generate information block.
+
+        Args:
+            None
+
+        Returns:
+            QWidget: Information block.
+        """
+        main_info_block = QWidget()
+        main_info_block.setStyleSheet("background-color: #DAE8FC;")
+        main_info_block.setContentsMargins(5, 0, 5, 0)
+        main_info_block.setFixedWidth(250)
+
+        main_info_block_layout = QGridLayout(main_info_block)
+        main_info_block_layout.setContentsMargins(5, 0, 5, 0)
+        main_info_block_layout.setSpacing(5)
+
+        date_growth = QLabel("Дата роста")
+        date_growth.setFixedHeight(20)
+        date_growth.setFixedWidth(90)
+        main_info_block_layout.addWidget(date_growth, 0, 0)
+
+        date_fell = QLabel("Дата рубки")
+        date_fell.setFixedHeight(20)
+        date_fell.setFixedWidth(90)
+        main_info_block_layout.addWidget(date_fell, 0, 1)
+
+        reserve_before = QLabel("Запас до")
+        reserve_before.setFixedHeight(20)
+        reserve_before.setFixedWidth(90)
+        main_info_block_layout.addWidget(reserve_before, 1, 0)
+
+        reserve_after = QLabel("Запас после")
+        reserve_after.setFixedHeight(20)
+        reserve_after.setFixedWidth(90)
+        main_info_block_layout.addWidget(reserve_after, 1, 1)
+
+        value_before = QLabel("Объём до")
+        value_before.setFixedHeight(20)
+        value_before.setFixedWidth(90)
+        main_info_block_layout.addWidget(value_before, 2, 0)
+
+        value_after = QLabel("Объём после")
+        value_after.setFixedHeight(20)
+        value_after.setFixedWidth(90)
+        main_info_block_layout.addWidget(value_after, 2, 1)
+
+        intensity_by_reserve = QLabel("Интенсивность по запасу")
+        intensity_by_reserve.setFixedHeight(20)
+        intensity_by_reserve.setFixedWidth(90)
+        main_info_block_layout.addWidget(intensity_by_reserve, 3, 0)
+
+        intensity_by_volume = QLabel("Интенсивность по объёму")
+        intensity_by_volume.setFixedHeight(20)
+        intensity_by_volume.setFixedWidth(90)
+        main_info_block_layout.addWidget(intensity_by_volume, 3, 1)
+
+        main_info_block.setLayout(main_info_block_layout)
+
+        return main_info_block
 
 
 if __name__ == "__main__":
