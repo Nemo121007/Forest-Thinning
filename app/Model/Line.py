@@ -130,9 +130,6 @@ class Line:
 
     def predict_value(self, x: float, start_point: float) -> float:
         """Predicts the value of y based on x and the starting parameter."""
-        if not (self.left_border <= x <= self.right_border):
-            raise ValueError("x is out of range")
-
         # Combine input x and start_point
         combined_x = np.array([[x, start_point]])
 
