@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor, QPalette
 import sys
 
+from app.Model.Graph import Graph
+
 
 class MainWindow(QWidget):
     """Class for main window of the application.
@@ -63,6 +65,12 @@ class MainWindow(QWidget):
         layout.addWidget(content)
 
         self.setLayout(layout)
+
+        graph = Graph(name="pine_sorrel")
+        self.graph = graph
+        self.graph.load_graph()
+
+        pass
 
     def create_header(self) -> QWidget:
         """Create header part of the screen.
@@ -192,11 +200,11 @@ class MainWindow(QWidget):
         main_layout = QHBoxLayout()
         main_layout.setContentsMargins(5, 0, 5, 0)
 
-        graphic = QWidget()
-        graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
-        graphic.setMinimumWidth(600)
-        graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(graphic)
+        self.graphic = QWidget()
+        self.graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
+        self.graphic.setMinimumWidth(600)
+        self.graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        main_layout.addWidget(self.graphic)
 
         # Создаем контейнер для блоков информации с прокруткой
         blocks_container = QWidget()
@@ -295,6 +303,19 @@ class MainWindow(QWidget):
         main_info_block.setLayout(main_info_block_layout)
 
         return main_info_block
+
+    def _update_graphic(
+        self,
+    ):
+        """Update graphic on the screen.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        pass
 
 
 if __name__ == "__main__":
