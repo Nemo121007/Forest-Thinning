@@ -7,7 +7,7 @@ import joblib
 
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
-from ..Paths import Paths
+from app.background_information.Paths import Paths
 
 from app.Model.Line import Line
 
@@ -35,7 +35,7 @@ class Graph:
         """Constructor.
 
         Args:
-            name (str): name of the
+            name (str): name of the graph
 
         Returns:
             None
@@ -44,6 +44,38 @@ class Graph:
         self.file_name: str = f"{name}.tar"
         self.dict_line: dict[str, Line] = {}
         self.dict_test: dict[str, Line] = {}
+        self.forest_area = None
+        self.main_breed = None
+        self.type_conditions = None
+        self.flag_save_forest = False
+
+    def set_data_graph(
+        self,
+        forest_area: str = None,
+        main_breed: str = None,
+        type_conditions: str = None,
+        flag_save_forest: bool = None,
+    ) -> None:
+        """Set data about forest area, main breed, type conditions and status save forest graph.
+
+        Args:
+            forest_area (str): forest area
+            main_breed (str): main breed
+            type_conditions (str): type conditions
+            flag_save_forest (bool): status save forest graph
+
+        Returns:
+            None
+        """
+        if forest_area is not None:
+            self.forest_area = forest_area
+        if main_breed is not None:
+            self.main_breed = main_breed
+        if type_conditions is not None:
+            self.type_conditions = type_conditions
+        if flag_save_forest is not None:
+            self.flag_save_forest = flag_save_forest
+        pass
 
     def load_graph_from_tar(self, test_mark: bool = False):
         """Load graph data from a tar file.

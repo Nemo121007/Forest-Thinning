@@ -13,6 +13,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor, QPalette
 import sys
+import pyqtgraph as pg
+
+from app.Model.Graph import Graph
 
 
 class MainWindow(QWidget):
@@ -63,6 +66,13 @@ class MainWindow(QWidget):
         layout.addWidget(content)
 
         self.setLayout(layout)
+
+        graph = Graph(name="pine_sorrel")
+        self.graph = graph
+        self.graph.load_graph()
+        self._update_graphic()
+
+        pass
 
     def create_header(self) -> QWidget:
         """Create header part of the screen.
@@ -192,11 +202,11 @@ class MainWindow(QWidget):
         main_layout = QHBoxLayout()
         main_layout.setContentsMargins(5, 0, 5, 0)
 
-        graphic = QWidget()
-        graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
-        graphic.setMinimumWidth(600)
-        graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(graphic)
+        self.graphic = QWidget()
+        self.graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
+        self.graphic.setMinimumWidth(600)
+        self.graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        main_layout.addWidget(self.graphic)
 
         # Создаем контейнер для блоков информации с прокруткой
         blocks_container = QWidget()
@@ -295,6 +305,63 @@ class MainWindow(QWidget):
         main_info_block.setLayout(main_info_block_layout)
 
         return main_info_block
+
+    def _update_graphic(self):
+        """Обновить график на экране."""
+        import numpy as np
+
+        if not hasattr(self, "graphic_layout"):
+            self.graphic_layout = QVBoxLayout(self.graphic)
+
+        plot_widget = pg.PlotWidget()
+        plot_widget.setBackground("w")
+
+        # Устанавливаем фиксированные пределы осей
+        plot_widget.setXRange(20, 120, padding=0)  # для оси X от 0 до 120
+        plot_widget.setYRange(14, 60, padding=0)  # для оси Y от 0 до 1
+
+        # Отключаем автоматическое масштабирование
+        plot_widget.setAutoVisible(y=False)
+        plot_widget.enableAutoRange(enable=False)
+
+        # Ограничиваем возможность прокрутки
+        plot_widget.setLimits(xMin=20, xMax=120, yMin=14, yMax=60)
+
+        # Создаем базовый массив X от 0 до 120 с шагом 0.5
+        x_values = np.arange(0, 120.5, 0.5)
+
+        for key, item in self.graph.dict_line.items():
+            name = item.name
+
+            if "growth line" in name:
+                # Для growth line создаем пучок линий с start_parameter от 21 до 35
+                for start_param in range(21, 36, 2):
+                    y_predict = [self.graph.predict("growth line", x, start_param) for x in x_values]
+                    plot_widget.plot(
+                        x_values, y_predict, pen=pg.mkPen("b", width=1), name=f"Growth line (start={start_param})"
+                    )
+
+            elif "recovery line" in name:
+                # Для recovery line создаем пучок линий с start_parameter от 0 до 120
+                for start_param in range(20, 121, 5):
+                    y_predict = [self.graph.predict("recovery line", x, start_param) for x in x_values]
+                    plot_widget.plot(
+                        x_values, y_predict, pen=pg.mkPen("r", width=1), name=f"Recovery line (start={start_param})"
+                    )
+
+            else:
+                # Для уникальных линий используем start_parameter = 0
+                y_predict = [self.graph.predict(name, x, 0) for x in x_values]
+                plot_widget.plot(x_values, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {name}")
+
+        plot_widget.addLegend()
+        plot_widget.setLabel("left", "Полнота")
+        plot_widget.setLabel("bottom", "Возраст, лет")
+
+        if self.graphic_layout.count() > 0:
+            self.graphic_layout.itemAt(0).widget().setParent(None)
+
+        self.graphic_layout.addWidget(plot_widget)
 
 
 if __name__ == "__main__":

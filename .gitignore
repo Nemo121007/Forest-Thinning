@@ -15,3 +15,7 @@ tmp_*
 .vscode/
 
 model_saving/*
+
+*.json
+
+*.pkl
