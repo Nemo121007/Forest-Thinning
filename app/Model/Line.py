@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 
+from app.background_information.Type_line import Type_line
+
 
 class Line:
     """Class containing the data and methods for working with a line.
@@ -24,6 +26,7 @@ class Line:
         polynomial_features: PolynomialFeatures = None,
         polynomial_regression: LinearRegression = None,
         name: str = None,
+        type_line: Type_line = None,
         X: list = None,
         Y: list = None,
         start_parameter: list[float] = None,
@@ -39,7 +42,8 @@ class Line:
 
         self.polynomial_features = polynomial_features or PolynomialFeatures(degree=5)  # Default degree
         self.polynomial_regression = polynomial_regression or LinearRegression()
-        self.name: str = name
+        self.name = name
+        self.type_line: Type_line = type_line
         self.X: np.ndarray = np.array(X) if X else None
         self.Y: np.ndarray = np.array(Y) if Y else None
         if X is not None and start_parameter is not None and left_border is not None and right_border is not None:
@@ -52,6 +56,7 @@ class Line:
         polynomial_features: PolynomialFeatures = None,
         polynomial_regression: LinearRegression = None,
         name: str = None,
+        type_line: Type_line = None,
         X: list[float] = None,
         Y: list[float] = None,
         start_parameter: float = None,
@@ -67,8 +72,10 @@ class Line:
             self.polynomial_features = polynomial_features
         if polynomial_regression is not None:
             self.polynomial_regression = polynomial_regression
-        if name is not None:
+        if type_line is not None:
             self.name = name
+        if type_line is not None:
+            self.type_line = type_line
         if X is not None:
             self.X = np.array(X)
             self.left_border = X[0]

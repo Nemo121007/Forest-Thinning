@@ -16,6 +16,7 @@ import sys
 import pyqtgraph as pg
 
 from app.Model.Graph import Graph
+from app.background_information.Type_line import Type_line
 
 
 class MainWindow(QWidget):
@@ -331,28 +332,34 @@ class MainWindow(QWidget):
         x_values = np.arange(0, 120.5, 0.5)
 
         for key, item in self.graph.dict_line.items():
-            name = item.name
+            type_line = item.type_line
 
-            if "growth line" in name:
+            if type_line == Type_line.GROWTH_LINE:
                 # Для growth line создаем пучок линий с start_parameter от 21 до 35
                 for start_param in range(21, 36, 2):
-                    y_predict = [self.graph.predict("growth line", x, start_param) for x in x_values]
+                    y_predict = [
+                        self.graph.predict(type_line=Type_line.GROWTH_LINE, X=x, start_parameter=start_param)
+                        for x in x_values
+                    ]
                     plot_widget.plot(
                         x_values, y_predict, pen=pg.mkPen("b", width=1), name=f"Growth line (start={start_param})"
                     )
 
-            elif "recovery line" in name:
+            elif type_line == Type_line.RECOVERY_LINE:
                 # Для recovery line создаем пучок линий с start_parameter от 0 до 120
                 for start_param in range(20, 121, 5):
-                    y_predict = [self.graph.predict("recovery line", x, start_param) for x in x_values]
+                    y_predict = [
+                        self.graph.predict(type_line=Type_line.RECOVERY_LINE, X=x, start_parameter=start_param)
+                        for x in x_values
+                    ]
                     plot_widget.plot(
                         x_values, y_predict, pen=pg.mkPen("r", width=1), name=f"Recovery line (start={start_param})"
                     )
 
             else:
                 # Для уникальных линий используем start_parameter = 0
-                y_predict = [self.graph.predict(name, x, 0) for x in x_values]
-                plot_widget.plot(x_values, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {name}")
+                y_predict = [self.graph.predict(type_line=type_line, X=x, start_parameter=0) for x in x_values]
+                plot_widget.plot(x_values, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {type_line.value}")
 
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")
