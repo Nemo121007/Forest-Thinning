@@ -48,6 +48,10 @@ class Graph:
         self.main_breed = None
         self.type_conditions = None
         self.flag_save_forest = False
+        self.x_max = None
+        self.x_min = None
+        self.y_max = None
+        self.y_min = None
 
     def set_data_graph(
         self,
@@ -125,36 +129,25 @@ class Graph:
         item = Line()
         name_line = Type_line.give_enum_from_value(value=line["name"])
         if test_mark:
-            if name_line == Type_line.GROWTH_LINE:
-                item.load_data(
-                    name=line["name"], type_line=Type_line.GROWTH_LINE, X=all_x, Y=all_y, start_parameter=all_y[0]
-                )
-            elif name_line == Type_line.RECOVERY_LINE:
-                item.load_data(
-                    name=line["name"], type_line=Type_line.RECOVERY_LINE, X=all_x, Y=all_y, start_parameter=all_x[0]
-                )
-            else:
-                item.load_data(name=line["name"], type_line=name_line, X=all_x, Y=all_y, start_parameter=0)
-
+            item.load_info(name=line["name"], type_line=name_line)
             self.dict_test[line["name"]] = item
         else:
-            if name_line == Type_line.GROWTH_LINE:
-                if name_line in self.dict_line:
-                    item = self.dict_line[name_line]
-                    item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
-                else:
-                    item.load_data(type_line=name_line, X=all_x, Y=all_y, start_parameter=all_y[0])
-                    self.dict_line[name_line] = item
-            elif name_line == Type_line.RECOVERY_LINE:
-                if name_line in self.dict_line:
-                    item = self.dict_line[name_line]
-                    item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
-                else:
-                    item.load_data(type_line=name_line, X=all_x, Y=all_y, start_parameter=all_x[0])
-                    self.dict_line[name_line] = item
-            else:
-                item.load_data(type_line=name_line, X=all_x, Y=all_y, start_parameter=0)
+            if name_line not in self.dict_line:
+                item.load_info(type_line=name_line)
                 self.dict_line[name_line] = item
+            else:
+                item = self.dict_line[name_line]
+
+        item.append_data(X=all_x, Y=all_y)
+
+        if self.x_max is None or self.x_max < max(all_x):
+            self.x_max = max(all_x)
+        if self.x_min is None or self.x_min > min(all_x):
+            self.x_min = min(all_x)
+        if self.y_max is None or self.y_max < max(all_y):
+            self.y_max = max(all_y)
+        if self.y_min is None or self.y_min > min(all_y):
+            self.y_min = min(all_y)
 
     def fit_models(self):
         """Fit regression models for all lines.
@@ -184,8 +177,26 @@ class Graph:
         """
         if type_line not in self.dict_line:
             raise ValueError(f"Type line {type_line} not found")
+
+        if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
+            text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
+            raise ValueError(text)
+        if X < self.x_min or X > self.x_max:
+            return None
+
         model = self.dict_line[type_line]
-        return model.predict_value(X, start_parameter)
+
+        result = model.predict_value(X, start_parameter)
+
+        min_border = self.dict_line[Type_line.MIN_LEVEL_LOGGING].predict_value(X, start_point=0)
+        max_border = self.dict_line[Type_line.MAX_LEVEL_LOGGING].predict_value(X, start_point=0)
+
+        if result < min_border and type_line != Type_line.ECONOMIC_MIN_LINE:
+            return None
+        if result > max_border and type_line != Type_line.ECONOMIC_MAX_LINE:
+            return None
+
+        return result
 
     def check_graph(self):
         """Check the graph for the correctness of the approximation.
@@ -207,9 +218,17 @@ class Graph:
             symbol = ""
             list_change_symbol = []
 
+            list_args = []
+            list_y = []
             list_predict = []
             for i in range(len(item.X)):
                 y_predict = self.predict(type_line=item.type_line, X=item.X[i], start_parameter=item.start_parameter[i])
+
+                if y_predict is None:
+                    continue
+
+                list_args.append(item.X[i])
+                list_y.append(item.Y[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
@@ -225,15 +244,15 @@ class Graph:
                     max_different = abs(different)
 
             plt.plot(
-                item.X,
+                list_args,
                 list_predict,
                 label=f"Predicted {key}",
                 linestyle="--",
                 color="black",
             )
 
-            mse_total = mean_squared_error(item.Y, list_predict)
-            r2_total = r2_score(item.Y, list_predict)
+            mse_total = mean_squared_error(list_y, list_predict)
+            r2_total = r2_score(list_y, list_predict)
 
             print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
@@ -255,6 +274,10 @@ class Graph:
             "name": self.name,
             "file_name": self.file_name,
             "dict_line": {},
+            "x_max": self.x_max,
+            "x_min": self.x_min,
+            "y_max": self.y_max,
+            "y_min": self.y_min,
         }
 
         dict_lines = {}
@@ -263,8 +286,6 @@ class Graph:
                 "type_line": item.type_line.value,
                 "polynomial_features": f"{item.type_line.value}_polynomial_features.pkl",
                 "polynomial_regression": f"{item.type_line.value}_polynomial_regression.pkl",
-                "left_border": item.left_border,
-                "right_border": item.right_border,
             }
 
             path_graph = Paths.MODEL_DIRECTORY / f"{self.name}"
@@ -299,19 +320,19 @@ class Graph:
             raise ValueError("Error loading graph data")
 
         self.file_name = info_graph["file_name"]
+        self.x_max = info_graph["x_max"]
+        self.x_min = info_graph["x_min"]
+        self.y_max = info_graph["y_max"]
+        self.y_min = info_graph["y_min"]
 
         dict_lines = info_graph["dict_line"]
         for key, line in dict_lines.items():
             type_line = Type_line.give_enum_from_value(line["type_line"])
-            left_border = line["left_border"]
-            right_border = line["right_border"]
             polynomial_features = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_features"])
             polynomial_regression = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_regression"])
 
             item = Line(
                 type_line=type_line,
-                left_border=left_border,
-                right_border=right_border,
                 polynomial_features=polynomial_features,
                 polynomial_regression=polynomial_regression,
             )
