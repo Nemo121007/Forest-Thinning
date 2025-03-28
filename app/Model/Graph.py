@@ -2,14 +2,14 @@
 
 import json
 import tarfile
-import re
 import joblib
 
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
 from app.background_information.Paths import Paths
 
-from app.Model.Line import Line
+from .Line import Line
+from ..background_information.Type_line import Type_line
 
 
 class Graph:
@@ -42,12 +42,16 @@ class Graph:
         """
         self.name: str = name
         self.file_name: str = f"{name}.tar"
-        self.dict_line: dict[str, Line] = {}
-        self.dict_test: dict[str, Line] = {}
+        self.dict_line: dict[Type_line, Line] = {}
+        self.dict_test: dict[Type_line, Line] = {}
         self.forest_area = None
         self.main_breed = None
         self.type_conditions = None
         self.flag_save_forest = False
+        self.x_max = None
+        self.x_min = None
+        self.y_max = None
+        self.y_min = None
 
     def set_data_graph(
         self,
@@ -101,7 +105,7 @@ class Graph:
 
                 for i in range(len(data_list)):
                     line = data_list[i]
-                    self._load_data_line(line, test_mark)
+                    self._load_data_line_one_line(line, test_mark)
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {tar_path} not found.")
@@ -110,7 +114,7 @@ class Graph:
         except ValueError as e:
             raise ValueError(f"Value error: {e}")
 
-    def _load_data_line(self, line: dict, test_mark: bool = False):
+    def _load_data_line_one_line(self, line: dict, test_mark: bool = False):
         all_x = []
         all_y = []
 
@@ -123,49 +127,27 @@ class Graph:
             raise ValueError("The number of arguments X and Y does not match")
 
         item = Line()
+        name_line = Type_line.give_enum_from_value(value=line["name"])
         if test_mark:
-            if re.match(r"growth line \d+", line["name"]):
-                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_y[0])
-            elif re.match(r"recovery line \d+", line["name"]):
-                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=all_x[0])
-            else:
-                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
+            item.load_info(name=line["name"], type_line=name_line)
             self.dict_test[line["name"]] = item
         else:
-            name = self._rename_line(line["name"])
-            if "growth line" == name:
-                if "growth line" in self.dict_line:
-                    item = self.dict_line["growth line"]
-                    item.append_data(X=all_x, Y=all_y, start_parameter=all_y[0])
-                else:
-                    item.load_data(name="growth line", X=all_x, Y=all_y, start_parameter=all_y[0])
-                    self.dict_line["growth line"] = item
-            elif "recovery line" == name:
-                if "recovery line" in self.dict_line:
-                    item = self.dict_line["recovery line"]
-                    item.append_data(X=all_x, Y=all_y, start_parameter=all_x[0])
-                else:
-                    item.load_data(name="recovery line", X=all_x, Y=all_y, start_parameter=all_x[0])
-                    self.dict_line["recovery line"] = item
+            if name_line not in self.dict_line:
+                item.load_info(type_line=name_line)
+                self.dict_line[name_line] = item
             else:
-                item.load_data(name=line["name"], X=all_x, Y=all_y, start_parameter=0)
-                self.dict_line[line["name"]] = item
+                item = self.dict_line[name_line]
 
-    def _rename_line(self, name: str) -> str:
-        """Rename the line.
+        item.append_data(X=all_x, Y=all_y)
 
-        Args:
-            name (str): name of the line
-
-        Returns:
-            str: new name of the line
-        """
-        if re.match(r"growth line \d+", name):
-            return "growth line"
-        elif re.match(r"recovery line \d+", name):
-            return "recovery line"
-        else:
-            return name
+        if self.x_max is None or self.x_max < max(all_x):
+            self.x_max = max(all_x)
+        if self.x_min is None or self.x_min > min(all_x):
+            self.x_min = min(all_x)
+        if self.y_max is None or self.y_max < max(all_y):
+            self.y_max = max(all_y)
+        if self.y_min is None or self.y_min > min(all_y):
+            self.y_min = min(all_y)
 
     def fit_models(self):
         """Fit regression models for all lines.
@@ -182,21 +164,29 @@ class Graph:
             except ValueError as e:
                 print(f"Error fitting regression for {key}: {e}")
 
-    def predict(self, name: str, X: float, start_parameter: float = 0) -> float:
+    def predict(self, type_line: Type_line, X: float, start_parameter: float = 0) -> float:
         """Predict the value of the function at the point X.
 
         Args:
-            name (str): name of the line
+            type_line (Type_line): type of line
             X (float): point X
             start_parameter (float): start parameter
 
         Returns:
             float: predicted value
         """
-        if name not in self.dict_line:
-            raise ValueError(f"Line {name} not found")
-        model = self.dict_line[name]
-        return model.predict_value(X, start_parameter)
+        if type_line not in self.dict_line:
+            raise ValueError(f"Type line {type_line} not found")
+
+        if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
+            text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
+            raise ValueError(text)
+
+        model = self.dict_line[type_line]
+
+        result = model.predict_value(X, start_parameter)
+
+        return result
 
     def check_graph(self):
         """Check the graph for the correctness of the approximation.
@@ -218,17 +208,17 @@ class Graph:
             symbol = ""
             list_change_symbol = []
 
+            list_args = []
+            list_y = []
             list_predict = []
             for i in range(len(item.X)):
-                name = ""
-                if re.match(r"growth line \d+", item.name):
-                    name = "growth line"
-                elif re.match(r"recovery line \d+", item.name):
-                    name = "recovery line"
-                else:
-                    name = item.name
+                y_predict = self.predict(type_line=item.type_line, X=item.X[i], start_parameter=item.start_parameter[i])
 
-                y_predict = self.predict(name, item.X[i], item.start_parameter[i])
+                if y_predict is None:
+                    continue
+
+                list_args.append(item.X[i])
+                list_y.append(item.Y[i])
                 list_predict.append(y_predict)
                 different = item.Y[i] - y_predict
 
@@ -244,15 +234,15 @@ class Graph:
                     max_different = abs(different)
 
             plt.plot(
-                item.X,
+                list_args,
                 list_predict,
                 label=f"Predicted {key}",
                 linestyle="--",
                 color="black",
             )
 
-            mse_total = mean_squared_error(item.Y, list_predict)
-            r2_total = r2_score(item.Y, list_predict)
+            mse_total = mean_squared_error(list_y, list_predict)
+            r2_total = r2_score(list_y, list_predict)
 
             print(f"Количество перегибов {item.name}: {len(list_change_symbol)}")
             print(f"{item.name}: Общая MSE для обучающей выборки: {mse_total}")
@@ -274,16 +264,18 @@ class Graph:
             "name": self.name,
             "file_name": self.file_name,
             "dict_line": {},
+            "x_max": self.x_max,
+            "x_min": self.x_min,
+            "y_max": self.y_max,
+            "y_min": self.y_min,
         }
 
         dict_lines = {}
         for key, item in self.dict_line.items():
             line = {
-                "name": item.name,
-                "polynomial_features": f"{item.name}_polynomial_features.pkl",
-                "polynomial_regression": f"{item.name}_polynomial_regression.pkl",
-                "left_border": item.left_border,
-                "right_border": item.right_border,
+                "type_line": item.type_line.value,
+                "polynomial_features": f"{item.type_line.value}_polynomial_features.pkl",
+                "polynomial_regression": f"{item.type_line.value}_polynomial_regression.pkl",
             }
 
             path_graph = Paths.MODEL_DIRECTORY / f"{self.name}"
@@ -293,7 +285,7 @@ class Graph:
             joblib.dump(item.polynomial_features, path_graph / line["polynomial_features"])
             joblib.dump(item.polynomial_regression, path_graph / line["polynomial_regression"])
 
-            dict_lines[key] = line
+            dict_lines[key.value] = line
 
         info_graph["dict_line"] = dict_lines
 
@@ -318,24 +310,24 @@ class Graph:
             raise ValueError("Error loading graph data")
 
         self.file_name = info_graph["file_name"]
+        self.x_max = info_graph["x_max"]
+        self.x_min = info_graph["x_min"]
+        self.y_max = info_graph["y_max"]
+        self.y_min = info_graph["y_min"]
 
         dict_lines = info_graph["dict_line"]
         for key, line in dict_lines.items():
-            name = line["name"]
-            left_border = line["left_border"]
-            right_border = line["right_border"]
+            type_line = Type_line.give_enum_from_value(line["type_line"])
             polynomial_features = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_features"])
             polynomial_regression = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_regression"])
 
             item = Line(
-                name=name,
-                left_border=left_border,
-                right_border=right_border,
+                type_line=type_line,
                 polynomial_features=polynomial_features,
                 polynomial_regression=polynomial_regression,
             )
 
-            self.dict_line[key] = item
+            self.dict_line[type_line] = item
 
 
 if __name__ == "__main__":

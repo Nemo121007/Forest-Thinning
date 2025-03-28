@@ -13,9 +13,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor, QPalette
 import sys
+import numpy as np
 import pyqtgraph as pg
 
-from app.Model.Graph import Graph
+from ..Model.Graph import Graph
+from ..background_information.Type_line import Type_line
 
 
 class MainWindow(QWidget):
@@ -307,8 +309,17 @@ class MainWindow(QWidget):
         return main_info_block
 
     def _update_graphic(self):
-        """Обновить график на экране."""
-        import numpy as np
+        x_min = self.graph.x_min
+        x_max = self.graph.x_max
+        delta = x_max - x_min
+        x_min = x_min - delta * 0.1
+        x_max = x_max + delta * 0.1
+
+        y_min = self.graph.y_min
+        y_max = self.graph.y_max
+        delta = y_max - y_min
+        y_min = y_min - delta * 0.1
+        y_max = y_max + delta * 0.1
 
         if not hasattr(self, "graphic_layout"):
             self.graphic_layout = QVBoxLayout(self.graphic)
@@ -317,42 +328,56 @@ class MainWindow(QWidget):
         plot_widget.setBackground("w")
 
         # Устанавливаем фиксированные пределы осей
-        plot_widget.setXRange(20, 120, padding=0)  # для оси X от 0 до 120
-        plot_widget.setYRange(14, 60, padding=0)  # для оси Y от 0 до 1
+        plot_widget.setXRange(x_min, x_max, padding=0)  # для оси X от 0 до 120
+        plot_widget.setYRange(y_min, y_max, padding=0)  # для оси Y от 0 до 1
 
         # Отключаем автоматическое масштабирование
         plot_widget.setAutoVisible(y=False)
         plot_widget.enableAutoRange(enable=False)
 
         # Ограничиваем возможность прокрутки
-        plot_widget.setLimits(xMin=20, xMax=120, yMin=14, yMax=60)
+        plot_widget.setLimits(xMin=x_min, xMax=x_max, yMin=y_min, yMax=y_max)
 
         # Создаем базовый массив X от 0 до 120 с шагом 0.5
-        x_values = np.arange(0, 120.5, 0.5)
+        x_values = np.arange(x_min, x_max + 0.5, 0.5)
 
         for key, item in self.graph.dict_line.items():
-            name = item.name
+            type_line = item.type_line
 
-            if "growth line" in name:
+            if type_line == Type_line.GROWTH_LINE:
                 # Для growth line создаем пучок линий с start_parameter от 21 до 35
                 for start_param in range(21, 36, 2):
-                    y_predict = [self.graph.predict("growth line", x, start_param) for x in x_values]
-                    plot_widget.plot(
-                        x_values, y_predict, pen=pg.mkPen("b", width=1), name=f"Growth line (start={start_param})"
-                    )
+                    y_predict = []
+                    x_args = []
+                    for x in x_values:
+                        predict = self.graph.predict(type_line=type_line, X=x, start_parameter=start_param)
+                        if predict:
+                            y_predict.append(predict)
+                            x_args.append(x)
+                    plot_widget.plot(x_args, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {type_line.value}")
 
-            elif "recovery line" in name:
+            elif type_line == Type_line.RECOVERY_LINE:
                 # Для recovery line создаем пучок линий с start_parameter от 0 до 120
                 for start_param in range(20, 121, 5):
-                    y_predict = [self.graph.predict("recovery line", x, start_param) for x in x_values]
-                    plot_widget.plot(
-                        x_values, y_predict, pen=pg.mkPen("r", width=1), name=f"Recovery line (start={start_param})"
-                    )
+                    y_predict = []
+                    x_args = []
+                    for x in x_values:
+                        predict = self.graph.predict(type_line=type_line, X=x, start_parameter=start_param)
+                        if predict:
+                            y_predict.append(predict)
+                            x_args.append(x)
+                    plot_widget.plot(x_args, y_predict, pen=pg.mkPen("b", width=2), name=f"Line {type_line.value}")
 
             else:
                 # Для уникальных линий используем start_parameter = 0
-                y_predict = [self.graph.predict(name, x, 0) for x in x_values]
-                plot_widget.plot(x_values, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {name}")
+                y_predict = []
+                x_args = []
+                for x in x_values:
+                    predict = self.graph.predict(type_line=type_line, X=x, start_parameter=0)
+                    if predict:
+                        y_predict.append(predict)
+                        x_args.append(x)
+                plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {type_line.value}")
 
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")
