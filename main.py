@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import QApplication
 import sys
 
-from app.main_screen import MainWindow
+from app.View.main_screen import MainWindow
 
 
 if __name__ == "__main__":

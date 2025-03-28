@@ -16,8 +16,8 @@ import sys
 import numpy as np
 import pyqtgraph as pg
 
-from app.Model.Graph import Graph
-from app.background_information.Type_line import Type_line
+from ..Model.Graph import Graph
+from ..background_information.Type_line import Type_line
 
 
 class MainWindow(QWidget):

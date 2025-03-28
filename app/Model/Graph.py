@@ -8,8 +8,8 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
 from app.background_information.Paths import Paths
 
-from app.Model.Line import Line
-from app.background_information.Type_line import Type_line
+from .Line import Line
+from ..background_information.Type_line import Type_line
 
 
 class Graph:
@@ -181,20 +181,10 @@ class Graph:
         if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
             text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(text)
-        if X < self.x_min or X > self.x_max:
-            return None
 
         model = self.dict_line[type_line]
 
         result = model.predict_value(X, start_parameter)
-
-        min_border = self.dict_line[Type_line.MIN_LEVEL_LOGGING].predict_value(X, start_point=0)
-        max_border = self.dict_line[Type_line.MAX_LEVEL_LOGGING].predict_value(X, start_point=0)
-
-        if result < min_border and type_line != Type_line.ECONOMIC_MIN_LINE:
-            return None
-        if result > max_border and type_line != Type_line.ECONOMIC_MAX_LINE:
-            return None
 
         return result
 

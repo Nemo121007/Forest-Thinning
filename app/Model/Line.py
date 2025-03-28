@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 
-from app.background_information.Type_line import Type_line
+from ..background_information.Type_line import Type_line
 
 
 class Line:
