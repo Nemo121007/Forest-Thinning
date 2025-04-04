@@ -18,6 +18,8 @@ import pyqtgraph as pg
 
 from ..Model.Graph import Graph
 from ..background_information.Type_line import Type_line
+from ..background_information.Reference_data import ReferenceData
+from .list_graphics_window import ListGraphicsWindow
 
 
 class MainWindow(QWidget):
@@ -44,7 +46,7 @@ class MainWindow(QWidget):
         """
         super().__init__()
         self.setWindowTitle("Прототип экрана")
-        self.setGeometry(100, 100, 1024, 768)  # Окно
+        self.setGeometry(0, 0, 1024, 768)  # Окно
 
         # Главный фон
         self.setAutoFillBackground(True)
@@ -68,6 +70,10 @@ class MainWindow(QWidget):
         layout.addWidget(content)
 
         self.setLayout(layout)
+
+        self.areas = ReferenceData.get_list_areas()
+        self.breeds = ReferenceData.get_list_breeds()
+        self.types_conditions = ReferenceData.get_list_type_conditions()
 
         graph = Graph(name="pine_sorrel")
         self.graph = graph
@@ -114,6 +120,8 @@ class MainWindow(QWidget):
         btn_list_graphics = QPushButton("Список графиков")
         btn_list_graphics.setFixedWidth(150)
         btn_list_graphics.setStyleSheet("background-color: #D5E8D4;")
+        btn_list_graphics.clicked.connect(self.open_list_graphics)
+
         btn_settings = QPushButton("Настройки")
         btn_settings.setFixedWidth(150)
         btn_settings.setStyleSheet("background-color: #D5E8D4;")
@@ -121,6 +129,11 @@ class MainWindow(QWidget):
         header_layout.addWidget(btn_settings)
 
         return header
+
+    def open_list_graphics(self):
+        """Open list graphics window."""
+        self.list_graphics_window = ListGraphicsWindow()
+        self.list_graphics_window.show()
 
     def create_info(self) -> QWidget:
         """Create info part of the screen.
