@@ -22,9 +22,10 @@ class TypeSettings(Enum):
         SYSTEM_SETTINGS: settings system
     """
 
-    AREA = "area forest"
-    BREED = "breed forest"
-    CONDITION = "condition forest"
+    AREA = "Регион"
+    BREED = "Порода"
+    CONDITION = "Условия"
+    GRAPHIC = "График"
 
     def __str__(self) -> str:
         """Returns the string value of Type_settings enumeration member.

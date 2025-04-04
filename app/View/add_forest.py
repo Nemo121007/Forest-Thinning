@@ -1,33 +1,15 @@
-"""A QWidget-based class for adding forest data through a graphical user interface.
+"""Module for adding forest data in a GUI application.
 
-This class provides a form with various input fields for forest-related data including
-area selection, breed selection, condition selection, and file upload capabilities.
-
-Attributes:
-    name_edit_field (QLineEdit): Field for editing forest name
-    _code_edit_field (QLineEdit): Field for editing forest code
-    _age_edit_field (QLineEdit): Field for editing forest age
-    _age_save_edit_field (QLineEdit): Field for editing forest age save data
-
-Methods:
-    __init__(): Initializes the AddForest widget with basic layout and components
-    _name_form(): Creates and returns the title label widget
-    _get_fields(): Creates and returns the main input fields widget
-    _browse_file(file_input): Handles file selection through a file dialog
-    _get_buttons(): Creates and returns the button panel widget
-
-The window includes:
-    - A white background
-    - A title section
-    - Multiple dropdown menus for area, breed, and condition selection
-    - A file upload section with browse capability
-    - Action buttons at the bottom
+This module defines the AddForest class, which is a QWidget that allows users to add forest data
+by selecting various parameters and a file. The class includes methods for creating the GUI elements,
+validating user input, and handling file selection.
 """
 
+import shutil
+from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QLabel,
     QPushButton,
     QHBoxLayout,
     QLineEdit,
@@ -35,50 +17,32 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QPalette, QCloseEvent
+from PySide6.QtCore import Signal
+from app.background_information.Paths import Paths
+from ..background_information.Reference_data import ReferenceData
 
 
 class AddForest(QWidget):
-    """A QWidget class for adding forest data through a graphical user interface.
+    """A class representing a form for adding forest data.
 
-    This class provides a form interface for adding forest-related information, including
-    area selection, breed selection, condition selection, and file upload capabilities.
-
-    Attributes:
-        _name_edit_field (QLineEdit): Field for editing forest name.
-        _code_edit_field (QLineEdit): Field for editing forest code.
-        _age_edit_field (QLineEdit): Field for editing forest age.
-        _age_save_edit_field (QLineEdit): Field for editing forest age save data.
-
-    Methods:
-        _name_form(): Creates and returns the title label widget.
-        _get_fields(): Creates and returns the main form fields widget.
-        _browse_file(file_input): Handles file selection dialog for Excel files.
-        _get_buttons(): Creates and returns the button panel widget.
+    This class inherits from QWidget and provides a user interface for selecting
+    various parameters related to forest data, including area, breed, and condition.
+    It also allows the user to select a file and submit the form.
     """
+
+    form_closed = Signal()
 
     _name_edit_field = None
     _code_edit_field = None
     _age_edit_field = None
     _age_save_edit_field = None
+    _file_path = None
 
     def __init__(self) -> None:
-        """Initialize the AddForest window for adding new forest records.
+        """Initializes the AddForest form.
 
-        This window provides a form for entering forest details including name and other fields.
-        Sets up the main window properties, background color, and layout structure with:
-        - Name input form
-        - Forest parameter fields
-        - Control buttons panel
-
-        Window Specifications:
-            Title: "Добавить лес" (Add Forest)
-            Size: 600x500 pixels
-            Position: 100,100
-            Background: White
-
-        Returns:
-            None
+        Sets up the main window, layout, and UI elements.
         """
         super().__init__()
         self.setWindowTitle("Добавить лес")
@@ -93,32 +57,17 @@ class AddForest(QWidget):
         # Основная вертикальная компоновка
         layout = QVBoxLayout()
 
-        name_form = AddForest._name_form()
-        layout.addWidget(name_form)
-
-        fields = AddForest._get_fields()
+        fields = self._get_fields()
         layout.addWidget(fields)
 
-        buttons_panel = AddForest._get_buttons()
+        buttons_panel = self._get_buttons()
         layout.addWidget(buttons_panel)
 
         self.setLayout(layout)
 
         pass
 
-    @staticmethod
-    def _name_form() -> QWidget:
-        """Creates and returns a QWidget containing a label for forest addition.
-
-        Returns:
-            QWidget: A QLabel widget with text "Добавить лес" (Add forest).
-        """
-        label = QLabel("Добавить лес")
-
-        return label
-
-    @staticmethod
-    def _get_fields() -> QWidget:
+    def _get_fields(self) -> QWidget:
         """Creates and returns a QWidget containing a form with various input fields.
 
         The form includes:
@@ -135,19 +84,23 @@ class AddForest(QWidget):
         layout = QVBoxLayout(main_widget)
 
         area_combo = QComboBox()
-        area_combo.addItems(["Элемент 1", "Элемент 2", "Элемент 3"])
+        area_combo.addItems(ReferenceData.get_list_areas())
+        self.area_combo = area_combo
         layout.addWidget(area_combo)
 
         breed_combo = QComboBox()
-        breed_combo.addItems(["Элемент 1", "Элемент 2", "Элемент 3"])
+        breed_combo.addItems(ReferenceData.get_list_breeds())
+        self.breed_combo = breed_combo
         layout.addWidget(breed_combo)
 
         condition_combo = QComboBox()
-        condition_combo.addItems(["Элемент 1", "Элемент 2", "Элемент 3"])
+        condition_combo.addItems(ReferenceData.get_list_type_conditions())
+        self.condition_combo = condition_combo
         layout.addWidget(condition_combo)
 
         # Создаем горизонтальный контейнер для поля ввода и кнопки
         file_container = QWidget()
+        self._file_container_from = file_container
         file_layout = QHBoxLayout(file_container)
         file_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -159,59 +112,105 @@ class AddForest(QWidget):
 
         # Кнопка выбора файла
         browse_button = QPushButton("Обзор")
-        browse_button.clicked.connect(lambda: AddForest._browse_file(file_path_input))
+        browse_button.clicked.connect(lambda: self._browse_file(file_path_input))
         file_layout.addWidget(browse_button)
 
         layout.addWidget(file_container)
 
         return main_widget
 
-    @staticmethod
-    def _browse_file(file_input: QLineEdit):
-        """Opens a file dialog for selecting Excel files and updates the provided QLineEdit with the selected file path.
-
-        Args:
-            file_input (QLineEdit): The QLineEdit widget to update with the selected file path.
-
-        Returns:
-            None
-
-        Notes:
-            - Displays a file dialog filtered for Excel files (.xlsx, .xls) by default
-            - Also allows selecting all file types
-            - If user cancels selection, original text in QLineEdit remains unchanged
-            - Dialog title is in Russian ("Выберите файл")
-        """
-        file_name, _ = QFileDialog.getOpenFileName(
-            None, "Выберите файл", "", "Excel файлы (*.xlsx *.xls);;Все файлы (*.*)"
-        )
+    def _browse_file(self, file_input: QLineEdit):
+        file_name, _ = QFileDialog.getOpenFileName(None, "Выберите файл", "", ".tar файлы (*.tar);;Все файлы (*.*)")
         if file_name:
             file_input.setText(file_name)
+            self._file_path = Path(file_name)
 
-    @staticmethod
-    def _get_buttons() -> QWidget:
-        """Returns a QWidget containing two buttons for adding and cancelling.
-
-        This method creates and configures a horizontal layout with two buttons:
-        - A cancel button
-        - An add button
-        Both buttons are styled with a green background color (#D5E8D4) and have a fixed height of 50 pixels.
-
-        Returns:
-            QWidget: A widget containing the two styled buttons in a horizontal layout
-        """
+    def _get_buttons(self) -> QWidget:
         main_widget = QWidget()
 
         layout = QHBoxLayout(main_widget)
 
         btn_cancel = QPushButton("")
         btn_cancel.setFixedHeight(50)
-        btn_cancel.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
+        btn_cancel.clicked.connect(lambda: self.close())
         layout.addWidget(btn_cancel)
 
         btn_add = QPushButton("")
         btn_add.setFixedHeight(50)
         btn_add.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_add.clicked.connect(lambda: self._add_graphic())
         layout.addWidget(btn_add)
 
         return main_widget
+
+    def _check_parameters(self) -> bool:
+        flag_error = False
+        if not self._file_path:
+            self._file_container_from.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = True
+        else:
+            self._file_container_from.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
+        if ReferenceData.get_value_graphic(
+            name_area=self.area_combo.currentText(),
+            name_breed=self.breed_combo.currentText(),
+            name_condition=self.condition_combo.currentText(),
+        ):
+            self.area_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.breed_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.condition_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = True
+        else:
+            self.area_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
+            self.breed_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
+            self.condition_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
+        return flag_error
+
+    def _add_graphic(self):
+        if self._check_parameters():
+            return
+        # Получаем выбранные значения
+        area = self.area_combo.currentText()
+        breed = self.breed_combo.currentText()
+        condition = self.condition_combo.currentText()
+
+        # Формируем имя файла
+        file_name = (
+            f"{ReferenceData.get_value_area(area)}_"
+            f"{ReferenceData.get_value_breed(breed)}_"
+            f"{ReferenceData.get_value_types_conditions(condition)}.tar"
+        )
+
+        if not Paths.DATA_DIRECTORY.exists():
+            Paths.DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
+        # Путь для нового файла
+        target_path = Paths.DATA_DIRECTORY / file_name
+
+        try:
+            shutil.copy(self._file_path, target_path)
+        except Exception as e:
+            raise RuntimeError(f"Error copy file: {e}")
+
+        ReferenceData.add_graphic(
+            name_areas=area,
+            name_breed=breed,
+            name_condition=condition,
+            path_file_data=file_name,
+        )
+
+        self.close()
+
+        pass
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Closed event handler for the AddForest widget.
+
+        This method is called when the widget is closed. It emits a signal to notify
+        other components that the form has been closed.
+
+        Args:
+            event: The close event object.
+        """
+        self.form_closed.emit()
+        super().closeEvent(event)

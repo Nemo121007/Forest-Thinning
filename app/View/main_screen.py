@@ -46,7 +46,7 @@ class MainWindow(QWidget):
         """
         super().__init__()
         self.setWindowTitle("Прототип экрана")
-        self.setGeometry(100, 100, 1024, 768)  # Окно
+        self.setGeometry(0, 0, 1024, 768)  # Окно
 
         # Главный фон
         self.setAutoFillBackground(True)
@@ -71,9 +71,9 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-        self.areas = ReferenceData.areas
-        self.breeds = ReferenceData.breeds
-        self.types_conditions = ReferenceData.types_conditions
+        self.areas = ReferenceData.get_list_areas()
+        self.breeds = ReferenceData.get_list_breeds()
+        self.types_conditions = ReferenceData.get_list_type_conditions()
 
         graph = Graph(name="pine_sorrel")
         self.graph = graph
