@@ -14,12 +14,16 @@ from enum import Enum
 
 
 class TypeSettings(Enum):
-    """Enum type settings.
+    """Type settings enumeration for forest thinning application.
+
+    This enumeration class defines different types of settings used in the forest thinning
+    application, including area, breed, condition, and graphic settings.
 
     Attributes:
-        GRAPH_SETTINGS: settings graphic
-        COLOR_SETTINGS: settings color
-        SYSTEM_SETTINGS: settings system
+        AREA (str): Region or area setting, represented as "Регион"
+        BREED (str): Tree breed setting, represented as "Порода"
+        CONDITION (str): Conditions setting, represented as "Условия"
+        GRAPHIC (str): Graph setting, represented as "График"
     """
 
     AREA = "Регион"

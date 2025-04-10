@@ -5,7 +5,6 @@ by selecting various parameters and a file. The class includes methods for creat
 validating user input, and handling file selection.
 """
 
-import shutil
 from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget,
@@ -15,11 +14,11 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QComboBox,
     QFileDialog,
+    QMessageBox,
 )
 
 from PySide6.QtGui import QColor, QPalette, QCloseEvent
 from PySide6.QtCore import Signal
-from app.background_information.Paths import Paths
 from ..background_information.Reference_data import ReferenceData
 
 
@@ -33,10 +32,6 @@ class AddForest(QWidget):
 
     form_closed = Signal()
 
-    _name_edit_field = None
-    _code_edit_field = None
-    _age_edit_field = None
-    _age_save_edit_field = None
     _file_path = None
 
     def __init__(self) -> None:
@@ -65,8 +60,6 @@ class AddForest(QWidget):
 
         self.setLayout(layout)
 
-        pass
-
     def _get_fields(self) -> QWidget:
         """Creates and returns a QWidget containing a form with various input fields.
 
@@ -94,13 +87,13 @@ class AddForest(QWidget):
         layout.addWidget(breed_combo)
 
         condition_combo = QComboBox()
-        condition_combo.addItems(ReferenceData.get_list_type_conditions())
+        condition_combo.addItems(ReferenceData.get_list_conditions())
         self.condition_combo = condition_combo
         layout.addWidget(condition_combo)
 
         # Создаем горизонтальный контейнер для поля ввода и кнопки
         file_container = QWidget()
-        self._file_container_from = file_container
+        self._file_container_form = file_container
         file_layout = QHBoxLayout(file_container)
         file_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -145,13 +138,30 @@ class AddForest(QWidget):
         return main_widget
 
     def _check_parameters(self) -> bool:
-        flag_error = False
+        flag_error = True
         if not self._file_path:
-            self._file_container_from.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
-            flag_error = True
+            self._file_container_form.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = False
         else:
-            self._file_container_from.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
-        if ReferenceData.get_value_graphic(
+            self._file_container_form.setStyleSheet("border: gray; border-radius: 5px; padding: 2px;")
+
+        if str(self.area_combo.currentText()) == "":
+            self.area_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = False
+        else:
+            self.area_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+        if str(self.breed_combo.currentText()) == "":
+            self.breed_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = False
+        else:
+            self.breed_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+        if str(self.condition_combo.currentText()) == "":
+            self.condition_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            flag_error = False
+        else:
+            self.condition_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+
+        if ReferenceData.exist_graphic(
             name_area=self.area_combo.currentText(),
             name_breed=self.breed_combo.currentText(),
             name_condition=self.condition_combo.currentText(),
@@ -159,45 +169,27 @@ class AddForest(QWidget):
             self.area_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
             self.breed_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
             self.condition_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
-            flag_error = True
+            flag_error = False
         else:
-            self.area_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
-            self.breed_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
-            self.condition_combo.setStyleSheet("border: none; border-radius: 5px; padding: 2px;")
+            self.area_combo.setStyleSheet("border: gray; border-radius: 5px; padding: 2px;")
+            self.breed_combo.setStyleSheet("border: gray; border-radius: 5px; padding: 2px;")
+            self.condition_combo.setStyleSheet("border: gray; border-radius: 5px; padding: 2px;")
         return flag_error
 
     def _add_graphic(self):
-        if self._check_parameters():
+        if not self._check_parameters():
             return
         # Получаем выбранные значения
         area = self.area_combo.currentText()
         breed = self.breed_combo.currentText()
         condition = self.condition_combo.currentText()
 
-        # Формируем имя файла
-        file_name = (
-            f"{ReferenceData.get_value_area(area)}_"
-            f"{ReferenceData.get_value_breed(breed)}_"
-            f"{ReferenceData.get_value_types_conditions(condition)}.tar"
-        )
-
-        if not Paths.DATA_DIRECTORY.exists():
-            Paths.DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
-
-        # Путь для нового файла
-        target_path = Paths.DATA_DIRECTORY / file_name
-
         try:
-            shutil.copy(self._file_path, target_path)
+            ReferenceData.add_graphic(
+                name_area=area, name_breed=breed, name_condition=condition, path_file=Path(self._file_path)
+            )
         except Exception as e:
-            raise RuntimeError(f"Error copy file: {e}")
-
-        ReferenceData.add_graphic(
-            name_areas=area,
-            name_breed=breed,
-            name_condition=condition,
-            path_file_data=file_name,
-        )
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при сохранении: {str(e)}")
 
         self.close()
 

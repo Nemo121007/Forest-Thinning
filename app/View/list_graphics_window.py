@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QGridLayout,
     QScrollArea,
+    QMessageBox,
 )
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtCore import Qt
@@ -125,6 +126,15 @@ class ListGraphicsWindow(QWidget):
         return main_widget
 
     def _create_item_block(self, str_line: str, type_settings: TypeSettings) -> QWidget:
+        if type_settings == TypeSettings.AREA:
+            flag_used = ReferenceData.check_used_area(str_line)
+        elif type_settings == TypeSettings.BREED:
+            flag_used = ReferenceData.check_used_breed(str_line)
+        elif type_settings == TypeSettings.CONDITION:
+            flag_used = ReferenceData.check_used_condition(str_line)
+        else:
+            flag_used = False
+
         main_widget = QWidget()
         main_widget.setFixedHeight(45)
         layout_block = QHBoxLayout(main_widget)
@@ -140,10 +150,16 @@ class ListGraphicsWindow(QWidget):
 
         btn_item_block_delete = QPushButton()
         btn_item_block_delete.setFixedSize(30, 30)
-        btn_item_block_delete.setStyleSheet("background-color: #F8CECC; text-align: center;")
-        btn_item_block_delete.clicked.connect(
-            lambda: self._delete_block(str_line=str_line, type_settings=type_settings)
-        )
+        if not flag_used:
+            btn_item_block_delete.setStyleSheet("background-color: #F8CECC; text-align: center;")
+            btn_item_block_delete.clicked.connect(
+                lambda: self._delete_block(str_line=str_line, type_settings=type_settings)
+            )
+        else:
+            btn_item_block_delete.setStyleSheet("background-color: gray; text-align: center;")
+            btn_item_block_delete.clicked.connect(
+                lambda: QMessageBox.critical(self, "Ошибка", f"Данный {type_settings.value} используется в графиках")
+            )
         layout_block.addWidget(btn_item_block_delete)
 
         return main_widget
@@ -200,7 +216,18 @@ class ListGraphicsWindow(QWidget):
         return main_widget
 
     def refresh_ui(self) -> None:
-        """Refreshes the UI by updating the scroll areas and graphics table."""
+        """Updates all UI elements in the list graphics window.
+
+        This method refreshes the state of all scroll areas and the graphics table.
+        It updates three main components:
+            - Area scroll area with the current list of areas
+            - Breed scroll area with the current list of breeds
+            - Conditions scroll area with the current list of conditions
+            - Graphics table with the latest data
+
+        Returns:
+            None.
+        """
         self._update_scroll_areas(
             scroll_area=self.scroll_areas, items=ReferenceData.get_list_areas(), type_settings=TypeSettings.AREA
         )
@@ -209,7 +236,7 @@ class ListGraphicsWindow(QWidget):
         )
         self._update_scroll_areas(
             scroll_area=self.scroll_types_conditions,
-            items=ReferenceData.get_list_type_conditions(),
+            items=ReferenceData.get_list_conditions(),
             type_settings=TypeSettings.CONDITION,
         )
         self._update_graphics_table()
@@ -262,14 +289,16 @@ class ListGraphicsWindow(QWidget):
                 delete_button.setFixedWidth(50)
                 delete_button.setStyleSheet("background-color: #F8CECC; border: 1px solid black;")
                 delete_button.clicked.connect(
-                    lambda checked, a=area, b=breed, c=condition: self._delete_graphic(area=a, breed=b, condition=c)
+                    lambda checked, a=area, b=breed, c=condition: self._delete_graphic(
+                        area=area, breed=breed, condition=condition
+                    )
                 )
                 content_layout.addWidget(delete_button, row, 3)
 
             self.scroll_table.setWidget(content_widget)
 
         except Exception as e:
-            print(f"Error refresh table graphics: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении таблицы: {str(e)}")
 
     def _edit_block(self, str_line: str, type_settings: TypeSettings) -> None:
         if type_settings == TypeSettings.GRAPHIC:
@@ -277,7 +306,6 @@ class ListGraphicsWindow(QWidget):
         edit_form = CreateForm(type_action=TypeAction.UPDATE, type_settings=type_settings, name_element=str_line)
         edit_form.form_closed.connect(self.refresh_ui)
         edit_form.show()
-        pass
 
     def _add_block(self, type_settings: TypeSettings) -> None:
         if type_settings == TypeSettings.GRAPHIC:
@@ -286,11 +314,10 @@ class ListGraphicsWindow(QWidget):
             create_form = CreateForm(type_action=TypeAction.CREATE, type_settings=type_settings)
         create_form.form_closed.connect(self.refresh_ui)
         create_form.show()
-        pass
 
     def _delete_block(self, str_line: str, type_settings: TypeSettings) -> None:
         if type_settings == TypeSettings.AREA:
-            ReferenceData.delete_area(name_areas=str_line)
+            ReferenceData.delete_area(name_area=str_line)
         elif type_settings == TypeSettings.BREED:
             ReferenceData.delete_breed(name_breed=str_line)
         elif type_settings == TypeSettings.CONDITION:
