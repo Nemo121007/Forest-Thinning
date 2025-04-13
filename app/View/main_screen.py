@@ -18,8 +18,10 @@ import pyqtgraph as pg
 
 from ..Model.Graph import Graph
 from ..background_information.Type_line import Type_line
-from ..background_information.Reference_data import ReferenceData
 from .list_graphics_window import ListGraphicsWindow
+from ..Services.AreasService import AreasService
+from ..Services.BreedsService import BreedsService
+from ..Services.ConditionsService import ConditionsService
 
 
 class MainWindow(QWidget):
@@ -45,6 +47,11 @@ class MainWindow(QWidget):
             None
         """
         super().__init__()
+
+        self.manager_areas = AreasService()
+        self.manager_breeds = BreedsService()
+        self.manager_conditions = ConditionsService()
+
         self.setWindowTitle("Прототип экрана")
         self.setGeometry(0, 0, 1024, 768)  # Окно
 
@@ -71,9 +78,9 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-        self.areas = ReferenceData.get_list_areas()
-        self.breeds = ReferenceData.get_list_breeds()
-        self.types_conditions = ReferenceData.get_list_type_conditions()
+        self.areas = self.manager_areas.get_list()
+        self.breeds = self.manager_breeds.get_list()
+        self.types_conditions = self.manager_conditions.get_list()
 
         graph = Graph(name="pine_sorrel")
         self.graph = graph

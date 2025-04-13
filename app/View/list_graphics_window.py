@@ -1,8 +1,9 @@
-"""Module for the List Graphics Window.
+"""Module for the List Graphics Window in a PySide6-based GUI application.
 
-This module contains the ListGraphicsWindow class, which is responsible for displaying
-the list of graphics and providing functionality to add, edit, and delete graphics.
-It uses PySide6 for the GUI components and inherits from QWidget.
+This module contains the ListGraphicsWindow class, which provides a user interface for
+displaying and managing a list of graphics, areas, breeds, and conditions. It supports
+adding, editing, and deleting these elements through interaction with respective services,
+using PySide6 for GUI components.
 """
 
 from PySide6.QtWidgets import (
@@ -18,32 +19,51 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtCore import Qt
 from ..background_information.Type_settings import TypeSettings
-from ..background_information.Reference_data import ReferenceData
-from ..background_information.Type_action import TypeAction
-from ..View.create_form import CreateForm
-from ..View.add_forest import AddForest
+from .AddForest import AddForest
+from .CreateForm import CreateForm
+from .UpdateForm import UpdateForm
+from ..Services.AreasService import AreasService
+from ..Services.BreedsService import BreedsService
+from ..Services.ConditionsService import ConditionsService
+from ..Services.GraphicsService import GraphicsService
 
 
 class ListGraphicsWindow(QWidget):
-    """Class representing the List Graphics Window.
+    """A window for displaying and managing graphics, areas, breeds, and conditions.
 
-    This class is responsible for displaying the list of graphics and providing
-    functionality to add, edit, and delete graphics.
-    It inherits from QWidget and uses PySide6 for the GUI components.
+    This class provides a PySide6-based GUI to display lists of areas, breeds, conditions,
+    and graphics in scrollable areas and a table. It supports adding, editing, and deleting
+    these elements via buttons, with validation to prevent deletion of used items. It
+    interacts with services (AreasService, BreedsService, ConditionsService, GraphicsService)
+    to manage data persistence.
 
     Attributes:
-        scroll_table (QScrollArea): Scroll area for displaying the graphics table.
-        scroll_areas (QScrollArea): Scroll area for displaying the list of areas.
-        scroll_breeds (QScrollArea): Scroll area for displaying the list of breeds.
-        scroll_types_conditions (QScrollArea): Scroll area for displaying the list of conditions.
+        scroll_table (QScrollArea): Scroll area for the graphics table.
+        scroll_areas (QScrollArea): Scroll area for the list of areas.
+        scroll_breeds (QScrollArea): Scroll area for the list of breeds.
+        scroll_types_conditions (QScrollArea): Scroll area for the list of conditions.
+        manager_areas (AreasService): Service for managing Area elements.
+        manager_breeds (BreedsService): Service for managing Breed elements.
+        manager_conditions (ConditionsService): Service for managing Condition elements.
+        manager_graphics (GraphicsService): Service for managing graphic entries.
+        forms (list): List of open form windows (CreateForm, UpdateForm, AddForest).
     """
 
     def __init__(self) -> None:
         """Initialize the ListGraphicsWindow.
 
-        Sets up the UI components and layout for the window.
+        Sets up the window title, geometry, background, UI components, and services.
+        Initializes scroll areas and refreshes the UI to populate data.
         """
         super().__init__()
+
+        self.forms = []  # Список для хранения открытых форм
+
+        self.manager_areas = AreasService()
+        self.manager_breeds = BreedsService()
+        self.manager_conditions = ConditionsService()
+        self.manager_graphics = GraphicsService()
+
         self.scroll_table = None
         self.setWindowTitle("Список графиков")
         self.setGeometry(0, 0, 1000, 800)
@@ -66,6 +86,14 @@ class ListGraphicsWindow(QWidget):
         self.refresh_ui()
 
     def _get_list_components(self) -> QWidget:
+        """Create and configure the component lists for areas, breeds, and conditions.
+
+        Returns a widget containing three vertical layouts, each with a label, a scroll
+        area for items, and an add button for areas, breeds, and conditions.
+
+        Returns:
+            QWidget: A widget containing the component lists arranged horizontally.
+        """
         main_widget = QWidget()
         main_widget.setContentsMargins(5, 5, 5, 5)
 
@@ -126,12 +154,24 @@ class ListGraphicsWindow(QWidget):
         return main_widget
 
     def _create_item_block(self, str_line: str, type_settings: TypeSettings) -> QWidget:
+        """Create a block for an item in a scroll area.
+
+        Creates a widget with a label for the item name and buttons for editing and
+        deleting. The delete button is disabled (gray) if the item is used in graphics.
+
+        Args:
+            str_line (str): The name of the item (area, breed, or condition).
+            type_settings (TypeSettings): The type of item (AREA, BREED, or CONDITION).
+
+        Returns:
+            QWidget: A widget containing the item label and action buttons.
+        """
         if type_settings == TypeSettings.AREA:
-            flag_used = ReferenceData.check_used_area(str_line)
+            flag_used = self.manager_areas.check_used_area(str_line)
         elif type_settings == TypeSettings.BREED:
-            flag_used = ReferenceData.check_used_breed(str_line)
+            flag_used = self.manager_breeds.check_used_breed(str_line)
         elif type_settings == TypeSettings.CONDITION:
-            flag_used = ReferenceData.check_used_condition(str_line)
+            flag_used = self.manager_conditions.check_used_condition(str_line)
         else:
             flag_used = False
 
@@ -165,6 +205,14 @@ class ListGraphicsWindow(QWidget):
         return main_widget
 
     def _get_list_graphics(self) -> QWidget:
+        """Create and configure the graphics table with an add button.
+
+        Returns a widget containing a header row, a scrollable table of graphics
+        (area, breed, condition, delete button), and an add button for new graphics.
+
+        Returns:
+            QWidget: A widget containing the graphics table and add button.
+        """
         main_widget = QWidget()
         main_widget.setContentsMargins(5, 5, 5, 5)
 
@@ -216,32 +264,43 @@ class ListGraphicsWindow(QWidget):
         return main_widget
 
     def refresh_ui(self) -> None:
-        """Updates all UI elements in the list graphics window.
+        """Refresh all UI elements in the window.
 
-        This method refreshes the state of all scroll areas and the graphics table.
-        It updates three main components:
-            - Area scroll area with the current list of areas
-            - Breed scroll area with the current list of breeds
-            - Conditions scroll area with the current list of conditions
-            - Graphics table with the latest data
+        Updates the scroll areas for areas, breeds, and conditions, and the graphics table
+        with the latest data from the respective services.
 
         Returns:
-            None.
+            None
         """
         self._update_scroll_areas(
-            scroll_area=self.scroll_areas, items=ReferenceData.get_list_areas(), type_settings=TypeSettings.AREA
+            scroll_area=self.scroll_areas, items=self.manager_areas.get_list_areas(), type_settings=TypeSettings.AREA
         )
         self._update_scroll_areas(
-            scroll_area=self.scroll_breeds, items=ReferenceData.get_list_breeds(), type_settings=TypeSettings.BREED
+            scroll_area=self.scroll_breeds,
+            items=self.manager_breeds.get_list_breeds(),
+            type_settings=TypeSettings.BREED,
         )
         self._update_scroll_areas(
             scroll_area=self.scroll_types_conditions,
-            items=ReferenceData.get_list_conditions(),
+            items=self.manager_conditions.get_list_conditions(),
             type_settings=TypeSettings.CONDITION,
         )
         self._update_graphics_table()
 
     def _update_scroll_areas(self, scroll_area: QScrollArea, items: list, type_settings: TypeSettings) -> None:
+        """Update a scroll area with a list of items.
+
+        Populates the scroll area with item blocks (name, edit/delete buttons) for the
+        given items, alternating background colors for readability.
+
+        Args:
+            scroll_area (QScrollArea): The scroll area to update.
+            items (list): List of item names to display.
+            type_settings (TypeSettings): The type of items (AREA, BREED, or CONDITION).
+
+        Returns:
+            None
+        """
         blocks_widget = QWidget()
         blocks_layout = QVBoxLayout(blocks_widget)
 
@@ -258,6 +317,17 @@ class ListGraphicsWindow(QWidget):
         scroll_area.setWidget(blocks_widget)
 
     def _update_graphics_table(self) -> None:
+        """Update the graphics table with the latest data.
+
+        Populates the table with graphics data (area, breed, condition) and a delete
+        button for each row. Alternates row colors for readability.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs while retrieving or displaying graphics data.
+        """
         try:
             content_widget = QWidget()
             content_layout = QGridLayout(content_widget)
@@ -272,7 +342,7 @@ class ListGraphicsWindow(QWidget):
             content_layout.setColumnStretch(2, 1)  # Условия
             content_layout.setColumnStretch(3, 0)  # Кнопка удаления не растягивается
 
-            graphics_data = list(ReferenceData.get_list_graphics())
+            graphics_data = list(self.manager_graphics.get_list_graphics())
 
             for row, (area, breed, condition) in enumerate(graphics_data):
                 for col, text in enumerate([area, breed, condition]):
@@ -300,32 +370,99 @@ class ListGraphicsWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении таблицы: {str(e)}")
 
+    # TODO: Проверить переполнение списков форм
     def _edit_block(self, str_line: str, type_settings: TypeSettings) -> None:
+        """Open a form to edit an existing item.
+
+        Opens an UpdateForm for the specified item. Tracks the form and refreshes the UI
+        when it closes.
+
+        Args:
+            str_line (str): The name of the item to edit.
+            type_settings (TypeSettings): The type of item (AREA, BREED, or CONDITION).
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If type_settings is GRAPHIC, as editing graphics is not supported.
+        """
         if type_settings == TypeSettings.GRAPHIC:
             raise ValueError("Unidentified operation edit")
-        edit_form = CreateForm(type_action=TypeAction.UPDATE, type_settings=type_settings, name_element=str_line)
+        edit_form = UpdateForm(type_settings=type_settings, name_element=str_line)
+        self.forms.append(edit_form)
         edit_form.form_closed.connect(self.refresh_ui)
+        edit_form.form_closed.connect(lambda: self.forms.remove(edit_form))
         edit_form.show()
 
     def _add_block(self, type_settings: TypeSettings) -> None:
+        """Open a form to add a new item or graphic.
+
+        Opens a CreateForm for areas, breeds, or conditions, or an AddForest form for
+        graphics. Tracks the form and refreshes the UI when it closes.
+
+        Args:
+            type_settings (TypeSettings): The type of item or graphic to add (AREA, BREED, CONDITION, or GRAPHIC).
+
+        Returns:
+            None
+        """
         if type_settings == TypeSettings.GRAPHIC:
             create_form = AddForest()
         else:
-            create_form = CreateForm(type_action=TypeAction.CREATE, type_settings=type_settings)
+            create_form = CreateForm(type_settings=type_settings)
+        self.forms.append(create_form)  # Сохраняем ссылку
         create_form.form_closed.connect(self.refresh_ui)
+        create_form.form_closed.connect(lambda: self.forms.remove(create_form))  # Удаляем при закрытии
         create_form.show()
 
     def _delete_block(self, str_line: str, type_settings: TypeSettings) -> None:
+        """Delete an item if it is not used in graphics.
+
+        Deletes the specified item using the appropriate service and refreshes the UI.
+        Displays an error if the item is used in graphics.
+
+        Args:
+            str_line (str): The name of the item to delete.
+            type_settings (TypeSettings): The type of item (AREA, BREED, or CONDITION).
+
+        Returns:
+            None
+
+        Raises:
+            RuntimeError: If the item is used in graphics and cannot be deleted.
+        """
         if type_settings == TypeSettings.AREA:
-            ReferenceData.delete_area(name_area=str_line)
+            if not self.manager_areas.check_used_area(str_line):
+                self.manager_areas.delete_area(name=str_line)
+            else:
+                raise RuntimeError(f"{type_settings.value} {str_line} used in graphic")
         elif type_settings == TypeSettings.BREED:
-            ReferenceData.delete_breed(name_breed=str_line)
+            if not self.manager_breeds.check_used_breed(str_line):
+                self.manager_breeds.delete_breed(name=str_line)
+            else:
+                raise RuntimeError(f"{type_settings.value} {str_line} used in graphic")
         elif type_settings == TypeSettings.CONDITION:
-            ReferenceData.delete_type_condition(type_condition=str_line)
+            if not self.manager_conditions.check_used_condition(str_line):
+                self.manager_conditions.delete_condition(name=str_line)
+            else:
+                raise RuntimeError(f"{type_settings.value} {str_line} used in graphic")
         self.refresh_ui()
         pass
 
     def _delete_graphic(self, area: str, breed: str, condition: str) -> None:
-        ReferenceData.delete_graphic(name_area=area, name_breed=breed, name_condition=condition)
+        """Delete a graphic entry.
+
+        Removes the specified graphic using GraphicsService and refreshes the UI.
+
+        Args:
+            area (str): The area of the graphic.
+            breed (str): The breed of the graphic.
+            condition (str): The condition of the graphic.
+
+        Returns:
+            None
+        """
+        self.manager_graphics.delete_graphic(name_area=area, name_breed=breed, name_condition=condition)
         self.refresh_ui()
         pass

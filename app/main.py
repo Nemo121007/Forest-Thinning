@@ -6,8 +6,9 @@ Uses PySide6 to create a graphical interface.
 
 import sys
 from PySide6.QtWidgets import QApplication
-from app.View.main_screen import MainWindow  # noqa: F401
-from app.View.list_graphics_window import ListGraphicsWindow
+
+# from app.View.main_screen import MainWindow  # noqa: F401
+from .View.list_graphics_window import ListGraphicsWindow
 
 if __name__ == "__main__":
     # app = QApplication(sys.argv)
