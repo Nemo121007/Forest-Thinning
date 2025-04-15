@@ -45,7 +45,7 @@ class BreedsService:
             result = self.breeds.get_list()
             return result
         except Exception as e:
-            raise Exception(f"Error get list breeds {e}")
+            raise Exception(f"Error get list breeds {str(e)}")
 
     def get_list_allowed_breeds(self, area: str = None, condition: str = None) -> list[str]:
         """Retrieve a list of breeds allowed for a given area and condition.
@@ -64,7 +64,7 @@ class BreedsService:
             result = self.graphics.get_list_allowed_breeds(area=area, condition=condition)
             return result
         except Exception as e:
-            raise Exception(f"Error get list allowed breeds {e}")
+            raise Exception(f"Error get list allowed breeds {str(e)}")
 
     def get_list_used_breeds(self) -> list[tuple[str, bool]]:
         """Retrieve a list of breeds with their usage status.
@@ -80,7 +80,7 @@ class BreedsService:
             result = self.breeds.get_list_used()
             return result
         except Exception as e:
-            raise Exception(f"Error get list breeds used {e}")
+            raise Exception(f"Error get list breeds used {str(e)}")
 
     def check_used_breed(self, name: str) -> bool:
         """Check if a breed is used in graphics.
@@ -98,7 +98,7 @@ class BreedsService:
             result = self.breeds.check_used(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error check used name {e}")
+            raise Exception(f"Error check used name {str(e)}")
 
     def get_value_breed(self, name: str) -> str:
         """Retrieve the code associated with a breed.
@@ -116,7 +116,7 @@ class BreedsService:
             result = self.breeds.get_value(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error get value breed {e}")
+            raise Exception(f"Error get value breed {str(e)}")
 
     def get_age_thinning_breed(self, name: str) -> float:
         """Retrieve the age thinning value for a breed.
@@ -134,7 +134,7 @@ class BreedsService:
             result = self.breeds.get_age_thinning(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error get value breed {e}")
+            raise Exception(f"Error get value breed {str(e)}")
 
     def get_age_thinning_save_breed(self, name: str) -> float:
         """Retrieve the age thinning save value for a breed.
@@ -152,7 +152,7 @@ class BreedsService:
             result = self.breeds.get_age_thinning_save(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error get value breed {e}")
+            raise Exception(f"Error get value breed {str(e)}")
 
     def exist_name_breed(self, name: str) -> bool:
         """Check if a breed name already exists.
@@ -170,7 +170,7 @@ class BreedsService:
             result = self.breeds.exist_name(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error exist name breed {e}")
+            raise Exception(f"Error exist name breed {str(e)}")
 
     def exist_code_breed(self, code: str) -> bool:
         """Check if a breed code already exists.
@@ -188,7 +188,7 @@ class BreedsService:
             result = self.breeds.exist_code(code=code)
             return result
         except Exception as e:
-            raise Exception(f"Error exist code breed {e}")
+            raise Exception(f"Error exist code breed {str(e)}")
 
     def add_breed(
         self,
@@ -223,7 +223,7 @@ class BreedsService:
             )
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error add breed {e}")
+            raise Exception(f"Error add breed {str(e)}")
 
     def delete_breed(self, name: str) -> None:
         """Delete an existing breed.
@@ -243,7 +243,7 @@ class BreedsService:
             self.breeds.delete_breed(name=name)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error delete breed {e}")
+            raise Exception(f"Error delete breed {str(e)}")
 
     def update_breed(self, old_name: str, name: str, code: str, age_thinning: float, age_thinning_save: float) -> None:
         """Update an existing breed.
@@ -274,4 +274,4 @@ class BreedsService:
             )
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error update breed {e}")
+            raise Exception(f"Error update breed {str(e)}")

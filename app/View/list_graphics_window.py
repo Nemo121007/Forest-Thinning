@@ -392,7 +392,7 @@ class ListGraphicsWindow(QWidget):
         edit_form = UpdateForm(type_settings=type_settings, name_element=str_line)
         self.forms.append(edit_form)
         edit_form.form_closed.connect(self.refresh_ui)
-        edit_form.form_closed.connect(lambda: self.forms.remove(edit_form))
+        edit_form.form_closed.connect(lambda: self.forms.clear())
         edit_form.show()
 
     def _add_block(self, type_settings: TypeSettings) -> None:
@@ -413,7 +413,7 @@ class ListGraphicsWindow(QWidget):
             create_form = CreateForm(type_settings=type_settings)
         self.forms.append(create_form)  # Сохраняем ссылку
         create_form.form_closed.connect(self.refresh_ui)
-        create_form.form_closed.connect(lambda: self.forms.remove(create_form))  # Удаляем при закрытии
+        create_form.form_closed.connect(lambda: self.forms.clear())  # Удаляем при закрытии
         create_form.show()
 
     def _delete_block(self, str_line: str, type_settings: TypeSettings) -> None:

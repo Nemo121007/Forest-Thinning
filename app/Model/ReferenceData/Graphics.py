@@ -5,9 +5,11 @@ breeds, and conditions. It supports operations like adding, deleting, and queryi
 managing file storage, and tracking usage across related entities.
 """
 
+import copy
 import os
 from pathlib import Path
 import shutil
+import tarfile
 from ...background_information.Paths import Paths
 from typing import TYPE_CHECKING
 
@@ -147,31 +149,109 @@ class Graphics:
         Paths.DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
         with self._areas.transaction():
-            shutil.copy(path_file, target_path)
+            self._copy_tar_file(path_file=path_file, target_path=target_path, file_name=file_name)
             self._data[(name_area, name_breed, name_condition)] = file_name
             self._areas._used[name_area] = True
             self._breeds._used[name_breed] = True
             self._conditions._used[name_condition] = True
 
-    def delete_graphic(self, name_area: str, name_breed: str, name_condition: str) -> None:
-        """Delete an existing graphic.
+    def _copy_tar_file(self, path_file: Path, target_path: Path, file_name: str) -> None:
+        """Copy and restructure a tar file to the target path with a new root directory name.
 
-        Removes the graphic file and data entry within a transaction and refreshes usage
-        tracking for related entities.
+        Reads the source tar file, renames its root directory to the specified file name,
+        and writes the restructured contents to the target tar file.
 
         Args:
-            name_area (str): The name of the area.
-            name_breed (str): The name of the breed.
-            name_condition (str): The name of the condition.
+            path_file (Path): The source path of the tar file.
+            target_path (Path): The destination path for the new tar file.
+            file_name (str): The new name for the root directory in the tar file.
 
         Returns:
             None
+
+        Raises:
+            tarfile.ReadError: If the source tar file cannot be read.
+            tarfile.TarError: If an error occurs while creating the new tar file.
         """
-        file_path = Paths.DATA_DIRECTORY / f"{self._data[(name_area, name_breed, name_condition)]}.tar"
+        with tarfile.open(path_file, "r") as src_tar, tarfile.open(target_path, "w") as dst_tar:
+            # Получаем все элементы архива
+            members = src_tar.getmembers()
+
+            # Находим имя корневой папки
+            root_dir = next(m for m in members if m.isdir())
+            old_dir_name = root_dir.name
+
+            # Копируем каждый файл с новым путем
+            for member in members:
+                # Читаем содержимое файла если это файл
+                if member.isfile():
+                    file_content = src_tar.extractfile(member)
+
+                # Создаем новый TarInfo с измененным путем
+                new_member = copy.copy(member)
+                new_member.name = member.name.replace(old_dir_name, file_name)
+
+                # Добавляем в новый архив
+                if member.isfile():
+                    dst_tar.addfile(new_member, file_content)
+                else:
+                    dst_tar.addfile(new_member)
+
+    def delete_graphic(self, name_area: str, name_breed: str, name_condition: str) -> None:
+        """Delete a graphic and its associated files.
+
+        Removes the graphic identified by the specified area, breed, and condition from
+        the data store, deletes its model directory, model info JSON file, and tar file,
+        and updates usage tracking for related entities within a transaction.
+
+        Args:
+            name_area (str): The name of the area associated with the graphic.
+            name_breed (str): The name of the breed associated with the graphic.
+            name_condition (str): The name of the condition associated with the graphic.
+
+        Returns:
+            None
+
+        Raises:
+            KeyError: If the graphic does not exist in the data store.
+            FileNotFoundError: If the model directory, model info file, or tar file is missing.
+            OSError: If an error occurs while deleting files or directories.
+        """
+        name_graphic = self._data[(name_area, name_breed, name_condition)]
+
         with self._areas.transaction():
-            os.remove(file_path)
+            model_path_delete = Paths.MODEL_DIRECTORY / f"{name_graphic}"
+            model_info_path_delete = Paths.MODEL_DIRECTORY / f"{name_graphic}.json"
+            shutil.rmtree(model_path_delete)
+            os.remove(model_info_path_delete)
+            tar_path = Paths.DATA_DIRECTORY / f"{name_graphic}.tar"
+            os.remove(tar_path)
             del self._data[(name_area, name_breed, name_condition)]
             self.refresh_used_elements()
+
+    def rename_graphic(self, old_name_graphic: str, new_name_graphic: str) -> None:
+        """Rename a graphic's model directory and info file.
+
+        Updates the model directory and its associated JSON info file by renaming them
+        from the old name to the new name.
+
+        Args:
+            old_name_graphic (str): The current name of the graphic (without extension).
+            new_name_graphic (str): The new name for the graphic (without extension).
+
+        Returns:
+            None
+
+        Raises:
+            FileNotFoundError: If the model directory or info file does not exist.
+            OSError: If an error occurs while renaming the files.
+        """
+        model_old_path = Paths.MODEL_DIRECTORY / f"{old_name_graphic}"
+        model_info_old_path = Paths.MODEL_DIRECTORY / f"{old_name_graphic}.json"
+        model_new_path = Paths.MODEL_DIRECTORY / f"{new_name_graphic}"
+        model_info_new_path = Paths.MODEL_DIRECTORY / f"{new_name_graphic}.json"
+        model_old_path.rename(model_new_path)
+        model_info_old_path.rename(model_info_new_path)
 
     def get_name_graphic(self, area: str, breed: str, condition: str) -> str:
         """Generate the file name for a graphic based on area, breed, and condition.

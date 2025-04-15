@@ -1,34 +1,40 @@
 """Module for managing graphics-related data in a reference data system.
 
 This module provides the GraphicsService class, which interacts with a ReferenceDataManager
-to perform operations on graphics data, including retrieval, addition, deletion, and
-validation of graphics associated with areas, breeds, and conditions.
+and PredictModelService to perform operations on graphics data, including retrieval,
+addition, deletion, and validation of graphics associated with areas, breeds, and conditions.
 """
 
 from .ReferenceDataManagerService import ReferenceDataManagerServices
+from .PredictModelServices import PredictModelService
 
 
 class GraphicsService:
     """A service class for managing graphics data.
 
     Provides methods to interact with graphics data through a ReferenceDataManager instance,
-    including retrieving graphic names, listing graphics, checking existence, retrieving
-    associated values, and performing add and delete operations. Saves changes to persistent
-    storage via the manager.
+    including retrieving graphic names, checking existence, and performing CRUD operations.
+    Integrates with PredictModelService for model initialization and deletion. Saves changes
+    to persistent storage via the manager.
 
     Attributes:
         manager (ReferenceDataManager): The reference data manager instance.
         graphics (object): The graphics data entity managed by ReferenceDataManager.
+        predict_model (PredictModelService): Service for managing prediction models.
     """
 
     def __init__(self):
         """Initialize the GraphicsService.
 
-        Sets up the service by retrieving the ReferenceDataManager instance and accessing
-        its graphics entity.
+        Sets up the service by retrieving the ReferenceDataManager instance, accessing its
+        graphics entity, and initializing the PredictModelService.
+
+        Returns:
+            None
         """
         self.manager = ReferenceDataManagerServices().manager
         self.graphics = self.manager.get_graphics()
+        self.predict_model = PredictModelService()
 
     def get_name_graphic(self, area: str, breed: str, condition: str) -> str:
         """Retrieve the name of a graphic based on area, breed, and condition.
@@ -48,7 +54,7 @@ class GraphicsService:
             result = self.graphics.get_name_graphic(area=area, breed=breed, condition=condition)
             return result
         except Exception as e:
-            raise Exception(f"Error get name condition {e}")
+            raise Exception(f"Error get name condition {str(e)}")
 
     def get_list_graphics(self) -> list[str]:
         """Retrieve a list of all graphics.
@@ -63,7 +69,7 @@ class GraphicsService:
             result = self.graphics.get_list_graphics()
             return result
         except Exception as e:
-            raise Exception(f"Error get list graphic {e}")
+            raise Exception(f"Error get list graphic {str(e)}")
 
     def exist_graphic(self, name_area: str, name_breed: str, name_condition: str) -> bool:
         """Check if a graphic exists for the given area, breed, and condition.
@@ -85,7 +91,7 @@ class GraphicsService:
             )
             return result
         except Exception as e:
-            raise Exception(f"Error exist graphic {e}")
+            raise Exception(f"Error exist graphic {str(e)}")
 
     def get_value_graphic(self, name_area: str, name_breed: str, name_condition: str) -> bool:
         """Retrieve the value (e.g., file path) associated with a graphic.
@@ -107,7 +113,7 @@ class GraphicsService:
             )
             return result
         except Exception as e:
-            raise Exception(f"Error get value graphic {e}")
+            raise Exception(f"Error get value graphic {str(e)}")
 
     def add_graphic(self, name_area: str, name_breed: str, name_condition: str, path_file: str) -> None:
         """Add a new graphic.
@@ -131,9 +137,13 @@ class GraphicsService:
             self.graphics.add_graphic(
                 name_area=name_area, name_breed=name_breed, name_condition=name_condition, path_file=path_file
             )
+            self.predict_model.initialize_predict_model(
+                area=name_area, breed=name_breed, condition=name_condition, flag_prepare_model=True
+            )
+            self.predict_model.save_model()
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error add file {e}")
+            raise Exception(f"Error add file {str(e)}")
 
     def delete_graphic(self, name_area: str, name_breed: str, name_condition: str) -> None:
         """Delete an existing graphic.
@@ -155,5 +165,6 @@ class GraphicsService:
         try:
             self.graphics.delete_graphic(name_area=name_area, name_breed=name_breed, name_condition=name_condition)
             self.manager.save_data()
+            self.predict_model.delete_model(area=name_area, breed=name_breed, condition=name_condition)
         except Exception as e:
-            raise Exception(f"Error delete graphic {e}")
+            raise Exception(f"Error delete graphic {str(e)}")
