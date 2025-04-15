@@ -7,6 +7,7 @@ which ensures a single instance of ReferenceDataManager is used throughout the a
 from typing import Any, TypeVar
 from collections.abc import Callable
 from ..Model.ReferenceData.ReferenceDataManager import ReferenceDataManager
+from ..Model.PredictiveModel.Graph import Graph
 
 # Define a generic type for the class
 T = TypeVar("T")
@@ -61,3 +62,4 @@ class ReferenceDataManagerServices:
             None
         """
         self.manager = ReferenceDataManager()
+        self.predict_model = Graph()

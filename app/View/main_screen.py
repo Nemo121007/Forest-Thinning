@@ -1,4 +1,10 @@
-"""File with main screen of the application."""
+"""Module for creating the main application window in a PySide6-based GUI.
+
+This module defines the MainWindow class, which serves as the primary interface for
+interacting with area, breed, condition, and graphics data. It includes a header with
+action buttons, an info panel with settings, and a main area for plotting graphics and
+displaying information blocks.
+"""
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -10,38 +16,66 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QScrollArea,
     QSizePolicy,
+    QComboBox,
 )
 from PySide6.QtGui import QColor, QPalette
 import sys
 import numpy as np
 import pyqtgraph as pg
 
-from ..Model.Graph import Graph
-from ..background_information.Type_line import Type_line
 from .list_graphics_window import ListGraphicsWindow
 from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
+from ..Services.GraphicsService import GraphicsService
+from ..Services.PredictModelServices import PredictModelService
+from ..background_information.Settings import Settings
+from ..background_information.Type_line import Type_line
 
 
 class MainWindow(QWidget):
-    """Class for main window of the application.
+    """The main application window for managing and visualizing graphics data.
+
+    Provides a PySide6-based GUI with a header for actions (e.g., open, save, settings),
+    an info panel for selecting area, breed, and condition, and a main area with a plot
+    widget for graphics and scrollable information blocks. Interacts with services to
+    manage data and predictions.
 
     Attributes:
-        None
-
-    Methods:
-        __init__: Create main window of the application.
-        create_header: Create header part of the screen.
-        create_info: Create info part of the screen.
-        create_main_part: Create main part of the screen
+        manager_areas (AreasService): Service for managing area data.
+        manager_breeds (BreedsService): Service for managing breed data.
+        manager_conditions (ConditionsService): Service for managing condition data.
+        manager_graphic (GraphicsService): Service for managing graphics data.
+        predict_model (PredictModelService): Service for prediction model operations.
+        name_area (str): Current area name selected in the UI.
+        name_breed (str): Current breed name selected in the UI.
+        name_condition (str): Current condition name selected in the UI.
+        name_graphic (str): Name of the current graphic (not used in code).
+        name_graphic_code (str): Code of the current graphic.
+        list_areas (list[str]): List of available area names.
+        list_breeds (list[str]): List of available breed names.
+        list_conditions (list[str]): List of available condition names.
+        flag_save_forest (bool): Flag indicating if protective forest mode is active.
+        x_min (float): Minimum x-value for plotting.
+        x_max (float): Maximum x-value for plotting.
+        y_min (float): Minimum y-value for plotting.
+        y_max (float): Maximum y-value for plotting.
+        list_value_x (list[float]): List of x-values for plotting.
+        list_value_y_min_logging (list[float]): Y-values for minimum logging line.
+        list_value_y_max_logging (list[float]): Y-values for maximum logging line.
+        list_value_y_min_economic (list[float]): Y-values for minimum economic line.
+        form_combo_area (QComboBox): Combo box for selecting areas.
+        form_combo_breed (QComboBox): Combo box for selecting breeds.
+        form_combo_condition (QComboBox): Combo box for selecting conditions.
+        graphic (QWidget): Widget containing the plot.
+        graphic_layout (QVBoxLayout): Layout for the plot widget.
     """
 
     def __init__(self):
-        """Create main window of the application.
+        """Initialize the MainWindow.
 
-        Args:
-            None
+        Sets up the window title, geometry, background, and UI components (header, info
+        panel, main content). Initializes services and loads initial parameters.
 
         Returns:
             None
@@ -51,52 +85,60 @@ class MainWindow(QWidget):
         self.manager_areas = AreasService()
         self.manager_breeds = BreedsService()
         self.manager_conditions = ConditionsService()
+        self.manager_graphic = GraphicsService()
+        self.predict_model = PredictModelService()
+
+        self.name_area: str = None
+        self.name_breed: str = None
+        self.name_condition: str = None
+        self.name_graphic: str = None
+        self.name_graphic_code: str = None
+        self.list_areas: list[str] = None
+        self.list_breeds: list[str] = None
+        self.list_conditions: list[str] = None
+        self.flag_save_forest: bool = False
+        self.x_min: float = None
+        self.x_max: float = None
+        self.y_min: float = None
+        self.y_max: float = None
+        self.list_value_x: list[float] = None
+        self.list_value_y_min_logging: list[float] = None
+        self.list_value_y_max_logging: list[float] = None
+        self.list_value_y_min_economic: list[float] = None
 
         self.setWindowTitle("Прототип экрана")
         self.setGeometry(0, 0, 1024, 768)  # Окно
 
-        # Главный фон
         self.setAutoFillBackground(True)
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("white"))
         self.setPalette(palette)
 
-        # Основная вертикальная компоновка
         layout = QVBoxLayout()
 
-        # Создание заголовка
         header = self.create_header()
         layout.addWidget(header)
 
-        # Область информации
         info = self.create_info()
         layout.addWidget(info)
 
-        # Основная область
         content = self.create_main_part()
         layout.addWidget(content)
 
         self.setLayout(layout)
 
-        self.areas = self.manager_areas.get_list()
-        self.breeds = self.manager_breeds.get_list()
-        self.types_conditions = self.manager_conditions.get_list()
+        self.set_list_parameter()
 
-        graph = Graph(name="pine_sorrel")
-        self.graph = graph
-        self.graph.load_graph()
         self._update_graphic()
 
-        pass
-
     def create_header(self) -> QWidget:
-        """Create header part of the screen.
+        """Create the header panel with action buttons.
 
-        Args:
-            None
+        Constructs a header with buttons for opening, saving, and accessing graphics lists
+        and settings, styled with a yellow background.
 
         Returns:
-            QWidget: Header part of the screen.
+            QWidget: The header widget containing buttons.
         """
         header = QWidget()
         header.setFixedHeight(30)
@@ -137,19 +179,26 @@ class MainWindow(QWidget):
 
         return header
 
-    def open_list_graphics(self):
-        """Open list graphics window."""
+    def open_list_graphics(self) -> None:
+        """Open the list graphics window.
+
+        Creates and displays a ListGraphicsWindow for viewing available graphics.
+
+        Returns:
+            None
+        """
         self.list_graphics_window = ListGraphicsWindow()
         self.list_graphics_window.show()
 
     def create_info(self) -> QWidget:
-        """Create info part of the screen.
+        """Create the info panel with parameter selection.
 
-        Args:
-            None
+        Constructs a panel with combo boxes for selecting area, breed, condition, and
+        protective forest status, plus placeholders for current settings and results,
+        styled with a blue background.
 
         Returns:
-            QWidget: Info part of the screen.
+            QWidget: The info panel widget containing parameter controls.
         """
         info = QWidget()
         info.setFixedHeight(110)
@@ -165,14 +214,40 @@ class MainWindow(QWidget):
         main_setting.setContentsMargins(5, 0, 5, 0)
         main_setting.setSpacing(5)
 
+        # Виджет для лесного района
+        forest_widget = QVBoxLayout()
         forest_area = QLabel("Лесной район")
-        main_setting.addWidget(forest_area, 0, 0)
+        forest_combo = QComboBox()
+        self.form_combo_area = forest_combo
+        forest_widget.addWidget(forest_area)
+        forest_widget.addWidget(forest_combo)
+        main_setting.addLayout(forest_widget, 0, 0)
+
+        # Виджет для основной породы
+        breed_widget = QVBoxLayout()
         main_breed = QLabel("Основная порода")
-        main_setting.addWidget(main_breed, 0, 1)
+        breed_combo = QComboBox()
+        self.form_combo_breed = breed_combo
+        breed_widget.addWidget(main_breed)
+        breed_widget.addWidget(breed_combo)
+        main_setting.addLayout(breed_widget, 0, 1)
+
+        # Виджет для типа условий
+        conditions_widget = QVBoxLayout()
         type_conditions = QLabel("Тип условий")
-        main_setting.addWidget(type_conditions, 1, 0)
+        conditions_combo = QComboBox()
+        self.form_combo_condition = conditions_combo
+        conditions_widget.addWidget(type_conditions)
+        conditions_widget.addWidget(conditions_combo)
+        main_setting.addLayout(conditions_widget, 1, 0)
+
+        # Виджет для защитного леса
+        save_widget = QVBoxLayout()
         save_forest = QLabel("Защитный лес")
-        main_setting.addWidget(save_forest, 1, 1)
+        save_combo = QComboBox()
+        save_widget.addWidget(save_forest)
+        save_widget.addWidget(save_combo)
+        main_setting.addLayout(save_widget, 1, 1)
 
         main_setting_widget.setLayout(main_setting)
 
@@ -211,14 +286,70 @@ class MainWindow(QWidget):
 
         return info
 
-    def create_main_part(self) -> QWidget:
-        """Create main part of the screen.
+    def set_list_parameter(self) -> None:
+        """Populate combo boxes with area, breed, and condition data.
 
-        Args:
-            None
+        Retrieves lists of areas, breeds, and conditions from services, populates the
+        respective combo boxes, and sets the current selections. Loads the initial
+        graphic code and prediction model.
 
         Returns:
-            QWidget: Main part of the screen.
+            None
+        """
+        self.list_areas = self.manager_areas.get_list_areas()
+        self.list_breeds = self.manager_breeds.get_list_breeds()
+        self.list_conditions = self.manager_conditions.get_list_conditions()
+        self.form_combo_area.addItems(self.list_areas)
+        self.form_combo_breed.addItems(self.list_breeds)
+        self.form_combo_condition.addItems(self.list_conditions)
+        self.name_area = self.form_combo_area.currentText()
+        self.name_breed = self.form_combo_breed.currentText()
+        self.name_condition = self.form_combo_condition.currentText()
+        self.name_graphic_code = self.manager_graphic.get_value_graphic(
+            name_area=self.name_area, name_breed=self.name_breed, name_condition=self.name_condition
+        )
+        self.load_predict_model()
+
+    def load_predict_model(self) -> None:
+        """Load the prediction model and update plotting data.
+
+        Initializes the prediction model with the current area, breed, condition, and
+        protective forest flag, loads the model, and retrieves data for plotting
+        (x/y ranges and prediction lines).
+
+        Returns:
+            None
+        """
+        self.predict_model.initialize_predict_model(
+            area=self.name_area,
+            breed=self.name_breed,
+            condition=self.name_condition,
+            flag_save_forest=self.flag_save_forest,
+        )
+        self.predict_model.load_model()
+        self.x_min, self.x_max, self.y_min, self.y_max = self.predict_model.get_min_max_value()
+        self.list_value_x = np.arange(
+            self.x_min, self.x_max + Settings.STEP_PLOTTING_GRAPH, Settings.STEP_PLOTTING_GRAPH
+        ).tolist()
+        self.list_value_y_min_logging = self.predict_model.get_predict_list(
+            type_line=Type_line.MIN_LEVEL_LOGGING, x_list=self.list_value_x
+        )
+        self.list_value_y_max_logging = self.predict_model.get_predict_list(
+            type_line=Type_line.MAX_LEVEL_LOGGING, x_list=self.list_value_x
+        )
+        self.list_value_y_min_economic = self.predict_model.get_predict_list(
+            type_line=Type_line.ECONOMIC_MIN_LINE, x_list=self.list_value_x
+        )
+
+    def create_main_part(self) -> QWidget:
+        """Create the main content area with plot and info blocks.
+
+        Constructs a horizontal layout with a plot widget on the left (for graphics) and
+        a scrollable area on the right containing information blocks, plus a button to add
+        new blocks.
+
+        Returns:
+            QWidget: The main content widget.
         """
         main = QWidget()
         main_layout = QHBoxLayout()
@@ -267,13 +398,13 @@ class MainWindow(QWidget):
         return main
 
     def _create_info_block(self) -> QWidget:
-        """Generate information block.
+        """Create an information block for growth and logging data.
 
-        Args:
-            None
+        Constructs a grid layout with labels for growth date, felling date, reserve, volume,
+        and intensity metrics, styled with a blue background.
 
         Returns:
-            QWidget: Information block.
+            QWidget: The information block widget.
         """
         main_info_block = QWidget()
         main_info_block.setStyleSheet("background-color: #DAE8FC;")
@@ -328,19 +459,16 @@ class MainWindow(QWidget):
 
         return main_info_block
 
-    def _update_graphic(self):
-        x_min = self.graph.x_min
-        x_max = self.graph.x_max
-        delta = x_max - x_min
-        x_min = x_min - delta * 0.1
-        x_max = x_max + delta * 0.1
+    def _update_graphic(self) -> None:
+        """Update the plot widget with prediction data.
 
-        y_min = self.graph.y_min
-        y_max = self.graph.y_max
-        delta = y_max - y_min
-        y_min = y_min - delta * 0.1
-        y_max = y_max + delta * 0.1
+        Creates or updates a pyqtgraph PlotWidget to display minimum logging, maximum
+        logging, and economic minimum lines, with a filled area between economic minimum
+        and maximum logging lines. Sets axis labels and limits based on model data.
 
+        Returns:
+            None
+        """
         if not hasattr(self, "graphic_layout"):
             self.graphic_layout = QVBoxLayout(self.graphic)
 
@@ -348,56 +476,45 @@ class MainWindow(QWidget):
         plot_widget.setBackground("w")
 
         # Устанавливаем фиксированные пределы осей
-        plot_widget.setXRange(x_min, x_max, padding=0)  # для оси X от 0 до 120
-        plot_widget.setYRange(y_min, y_max, padding=0)  # для оси Y от 0 до 1
+        plot_widget.setXRange(self.x_min, self.x_max, padding=0)  # для оси X от 0 до 120
+        plot_widget.setYRange(self.y_min, self.y_max, padding=0)  # для оси Y от 0 до 1
 
         # Отключаем автоматическое масштабирование
         plot_widget.setAutoVisible(y=False)
         plot_widget.enableAutoRange(enable=False)
 
         # Ограничиваем возможность прокрутки
-        plot_widget.setLimits(xMin=x_min, xMax=x_max, yMin=y_min, yMax=y_max)
+        plot_widget.setLimits(xMin=self.x_min, xMax=self.x_max, yMin=self.y_min, yMax=self.y_max)
 
-        # Создаем базовый массив X от 0 до 120 с шагом 0.5
-        x_values = np.arange(x_min, x_max + 0.5, 0.5)
+        plot_widget.plot(
+            self.list_value_x,
+            self.list_value_y_min_logging,
+            pen=pg.mkPen("r", width=2),
+            name=f"Line {Type_line.MIN_LEVEL_LOGGING.value}",
+        )
+        plot_widget.plot(
+            self.list_value_x,
+            self.list_value_y_max_logging,
+            pen=pg.mkPen("r", width=2),
+            name=f"Line {Type_line.ECONOMIC_MAX_LINE.value}",
+        )
+        plot_widget.plot(
+            self.list_value_x,
+            self.list_value_y_min_economic,
+            pen=pg.mkPen("r", width=2),
+            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+        )
 
-        for key, item in self.graph.dict_line.items():
-            type_line = item.type_line
+        polygon = pg.FillBetweenItem(
+            curve1=pg.PlotDataItem(self.list_value_x, self.list_value_y_min_economic),
+            curve2=pg.PlotDataItem(self.list_value_x, self.list_value_y_max_logging),
+            brush=pg.mkBrush(color=(0, 0, 0, 15)),
+        )
+        plot_widget.addItem(polygon)
 
-            if type_line == Type_line.GROWTH_LINE:
-                # Для growth line создаем пучок линий с start_parameter от 21 до 35
-                for start_param in range(21, 36, 2):
-                    y_predict = []
-                    x_args = []
-                    for x in x_values:
-                        predict = self.graph.predict(type_line=type_line, X=x, start_parameter=start_param)
-                        if predict:
-                            y_predict.append(predict)
-                            x_args.append(x)
-                    plot_widget.plot(x_args, y_predict, pen=pg.mkPen("g", width=2), name=f"Line {type_line.value}")
+        # for key, item in self.graph.dict_line.items():
 
-            elif type_line == Type_line.RECOVERY_LINE:
-                # Для recovery line создаем пучок линий с start_parameter от 0 до 120
-                for start_param in range(20, 121, 5):
-                    y_predict = []
-                    x_args = []
-                    for x in x_values:
-                        predict = self.graph.predict(type_line=type_line, X=x, start_parameter=start_param)
-                        if predict:
-                            y_predict.append(predict)
-                            x_args.append(x)
-                    plot_widget.plot(x_args, y_predict, pen=pg.mkPen("b", width=2), name=f"Line {type_line.value}")
-
-            else:
-                # Для уникальных линий используем start_parameter = 0
-                y_predict = []
-                x_args = []
-                for x in x_values:
-                    predict = self.graph.predict(type_line=type_line, X=x, start_parameter=0)
-                    if predict:
-                        y_predict.append(predict)
-                        x_args.append(x)
-                plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {type_line.value}")
+        #         plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {type_line.value}")
 
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")

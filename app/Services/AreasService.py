@@ -45,7 +45,7 @@ class AreasService:
             result = self.areas.get_list()
             return result
         except Exception as e:
-            raise Exception(f"Error get list: {e}")
+            raise Exception(f"Error get list: {str(e)}")
 
     def get_list_allowed_areas(self, breed: str = None, condition: str = None) -> list[str]:
         """Retrieve a list of all area names.
@@ -60,7 +60,7 @@ class AreasService:
             result = self.graphics.get_list_allowed_areas(breed=breed, condition=condition)
             return result
         except Exception as e:
-            raise (f"Error get list allowed area: {e}")
+            raise (f"Error get list allowed area: {str(e)}")
 
     def get_list_used_areas(self) -> list[tuple[str, bool]]:
         """Retrieve a list of areas allowed for a given breed and condition.
@@ -79,7 +79,7 @@ class AreasService:
             result = self.areas.get_list_used()
             return result
         except Exception as e:
-            raise Exception(f"Error get list allowed area {e}")
+            raise Exception(f"Error get list allowed area {str(e)}")
 
     def check_used_area(self, name: str) -> bool:
         """Check if an area is used in graphics.
@@ -97,7 +97,7 @@ class AreasService:
             result = self.areas.check_used(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error check used area {e}")
+            raise Exception(f"Error check used area {str(e)}")
 
     def get_value_area(self, name: str) -> str:
         """Retrieve the code associated with an area.
@@ -115,7 +115,7 @@ class AreasService:
             result = self.areas.get_value(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error get value area {e}")
+            raise Exception(f"Error get value area {str(e)}")
 
     def exist_name_area(self, name: str) -> bool:
         """Check if an area name already exists.
@@ -133,7 +133,7 @@ class AreasService:
             result = self.areas.exist_name(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error exist name area {e}")
+            raise Exception(f"Error exist name area {str(e)}")
 
     def exist_code_area(self, code: str) -> bool:
         """Check if an area code already exists.
@@ -151,7 +151,7 @@ class AreasService:
             result = self.areas.exist_code(code=code)
             return result
         except Exception as e:
-            raise Exception(f"Error exist code area {e}")
+            raise Exception(f"Error exist code area {str(e)}")
 
     def add_area(self, name: str, code: str) -> None:
         """Add a new area.
@@ -173,7 +173,7 @@ class AreasService:
             self.areas.add_area(name=name, code=code)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error add area {e}")
+            raise Exception(f"Error add area {str(e)}")
 
     def delete_area(self, name: str) -> None:
         """Delete an existing area.
@@ -193,7 +193,7 @@ class AreasService:
             self.areas.delete_area(name=name)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error delete area {e}")
+            raise Exception(f"Error delete area {str(e)}")
 
     def update_area(self, old_name: str, name: str, code: str) -> None:
         """Update an existing area.
@@ -216,4 +216,4 @@ class AreasService:
             self.areas.update_area(old_name=old_name, name=name, code=code)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error update area {e}")
+            raise Exception(f"Error update area {str(e)}")

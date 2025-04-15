@@ -45,7 +45,7 @@ class ConditionsService:
             result = self.conditions.get_list()
             return result
         except Exception as e:
-            raise Exception(f"Error get list condition {e}")
+            raise Exception(f"Error get list condition {str(e)}")
 
     def get_list_allowed_condition(self, area: str = None, breed: str = None) -> list[bool]:
         """Retrieve a list of conditions allowed for a given area and breed.
@@ -64,7 +64,7 @@ class ConditionsService:
             result = self.graphics.get_list_allowed_conditions(area=area, breed=breed)
             return result
         except Exception as e:
-            raise Exception(f"Error get list allowed condition {e}")
+            raise Exception(f"Error get list allowed condition {str(e)}")
 
     def get_list_used_condition(self) -> list[tuple[str, bool]]:
         """Retrieve a list of conditions with their usage status.
@@ -80,7 +80,7 @@ class ConditionsService:
             result = self.conditions.get_list_used()
             return result
         except Exception as e:
-            raise Exception(f"Error get list allowed condition {e}")
+            raise Exception(f"Error get list allowed condition {str(e)}")
 
     def check_used_condition(self, name: str) -> bool:
         """Check if a condition is used in graphics.
@@ -98,7 +98,7 @@ class ConditionsService:
             result = self.conditions.check_used(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error check used condition {e}")
+            raise Exception(f"Error check used condition {str(e)}")
 
     def get_value_condition(self, name: str) -> str:
         """Retrieve the code associated with a condition.
@@ -116,7 +116,7 @@ class ConditionsService:
             result = self.conditions.get_value(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error get value condition {e}")
+            raise Exception(f"Error get value condition {str(e)}")
 
     def exist_name_condition(self, name: str) -> bool:
         """Check if a condition name already exists.
@@ -134,7 +134,7 @@ class ConditionsService:
             result = self.conditions.exist_name(name=name)
             return result
         except Exception as e:
-            raise Exception(f"Error exist name condition {e}")
+            raise Exception(f"Error exist name condition {str(e)}")
 
     def exist_code_condition(self, code: str) -> bool:
         """Check if a condition code already exists.
@@ -152,7 +152,7 @@ class ConditionsService:
             result = self.conditions.exist_code(code=code)
             return result
         except Exception as e:
-            raise Exception(f"Error exist code condition {e}")
+            raise Exception(f"Error exist code condition {str(e)}")
 
     def add_condition(self, name: str, code: str) -> None:
         """Add a new condition.
@@ -174,7 +174,7 @@ class ConditionsService:
             self.conditions.add_condition(name=name, code=code)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error add condition {e}")
+            raise Exception(f"Error add condition {str(e)}")
 
     def delete_condition(self, name: str) -> None:
         """Delete an existing condition.
@@ -194,7 +194,7 @@ class ConditionsService:
             self.conditions.delete_condition(name=name)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error delete condition {e}")
+            raise Exception(f"Error delete condition {str(e)}")
 
     def update_condition(self, old_name: str, name: str, code: str) -> None:
         """Update an existing condition.
@@ -217,4 +217,4 @@ class ConditionsService:
             self.conditions.update_condition(old_name=old_name, name=name, code=code)
             self.manager.save_data()
         except Exception as e:
-            raise Exception(f"Error update condition {e}")
+            raise Exception(f"Error update condition {str(e)}")
