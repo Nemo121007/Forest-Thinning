@@ -17,10 +17,10 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QComboBox,
+    QLineEdit,
 )
 from PySide6.QtGui import QColor, QPalette
 import sys
-import numpy as np
 import pyqtgraph as pg
 
 from .list_graphics_window import ListGraphicsWindow
@@ -29,7 +29,6 @@ from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
 from ..Services.GraphicsService import GraphicsService
 from ..Services.PredictModelServices import PredictModelService
-from ..background_information.Settings import Settings
 from ..background_information.Type_line import Type_line
 
 
@@ -105,6 +104,10 @@ class MainWindow(QWidget):
         self.list_value_y_min_logging: list[float] = None
         self.list_value_y_max_logging: list[float] = None
         self.list_value_y_min_economic: list[float] = None
+
+        self.list_value_y_bearing_line: list[float] = None
+        self.list_value_track_thinning: list[float] = None
+        self.list_record_planned_thinning: list[dict[str, float]] = None
 
         self.setWindowTitle("Прототип экрана")
         self.setGeometry(0, 0, 1024, 768)  # Окно
@@ -258,9 +261,17 @@ class MainWindow(QWidget):
         current_settings.setContentsMargins(5, 0, 5, 0)
         current_settings.setSpacing(5)
 
-        age = QLabel("Возраст")
-        current_settings.addWidget(age, 0, 0)
-        auto_mode = QLabel("Автоматический режим")
+        start_parameter_layout_widget = QWidget()
+        start_parameter_layout = QVBoxLayout(start_parameter_layout_widget)
+        start_parameter_widget = QLabel("Возраст")
+        start_parameter_edit_field = QLineEdit()
+        self.start_parameter_edit_field = start_parameter_edit_field
+        start_parameter_layout.addWidget(start_parameter_widget)
+        start_parameter_layout.addWidget(start_parameter_edit_field)
+        current_settings.addWidget(start_parameter_layout_widget, 0, 0)
+
+        auto_mode = QPushButton("Автоматический режим")
+        auto_mode.clicked.connect(lambda: self.update_graphic(start_parameter=self.start_parameter_edit_field.text()))
         current_settings.addWidget(auto_mode, 0, 1)
         start_value = QLabel("Начальная полнота")
         current_settings.addWidget(start_value, 1, 0)
@@ -310,6 +321,29 @@ class MainWindow(QWidget):
         )
         self.load_predict_model()
 
+    def update_graphic(self, start_parameter: str) -> None:
+        """Update the graphic data with a new bearing parameter.
+
+        Sets the bearing parameter in the prediction model, initializes the bearing line,
+        retrieves the bearing line data, runs a thinning simulation, and updates the plot
+        with the new data.
+
+        Args:
+            start_parameter (str): The starting parameter value (converted to float) for the bearing line.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If the start_parameter cannot be converted to a float.
+        """
+        start_parameter = float(start_parameter)
+        self.predict_model.set_bearing_parameter(bearing_parameter=start_parameter)
+        self.predict_model.initialize_bearing_line()
+        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
+        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
+        self._update_graphic()
+
     def load_predict_model(self) -> None:
         """Load the prediction model and update plotting data.
 
@@ -328,18 +362,15 @@ class MainWindow(QWidget):
         )
         self.predict_model.load_model()
         self.x_min, self.x_max, self.y_min, self.y_max = self.predict_model.get_min_max_value()
-        self.list_value_x = np.arange(
-            self.x_min, self.x_max + Settings.STEP_PLOTTING_GRAPH, Settings.STEP_PLOTTING_GRAPH
-        ).tolist()
-        self.list_value_y_min_logging = self.predict_model.get_predict_list(
-            type_line=Type_line.MIN_LEVEL_LOGGING, x_list=self.list_value_x
-        )
-        self.list_value_y_max_logging = self.predict_model.get_predict_list(
-            type_line=Type_line.MAX_LEVEL_LOGGING, x_list=self.list_value_x
-        )
-        self.list_value_y_min_economic = self.predict_model.get_predict_list(
-            type_line=Type_line.ECONOMIC_MIN_LINE, x_list=self.list_value_x
-        )
+        self.predict_model.initialize_base_line_graph(x_start=self.x_min, x_end=self.x_max)
+        (
+            self.list_value_x,
+            self.list_value_y_min_logging,
+            self.list_value_y_max_logging,
+            self.list_value_y_min_economic,
+        ) = self.predict_model.get_base_lines_graph()
+        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
+        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
 
     def create_main_part(self) -> QWidget:
         """Create the main content area with plot and info blocks.
@@ -489,19 +520,19 @@ class MainWindow(QWidget):
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_logging,
-            pen=pg.mkPen("r", width=2),
+            pen=pg.mkPen((0, 0, 255, 255), width=2),
             name=f"Line {Type_line.MIN_LEVEL_LOGGING.value}",
         )
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_max_logging,
-            pen=pg.mkPen("r", width=2),
+            pen=pg.mkPen((0, 0, 255, 255), width=2),
             name=f"Line {Type_line.ECONOMIC_MAX_LINE.value}",
         )
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_economic,
-            pen=pg.mkPen("r", width=2),
+            pen=pg.mkPen((255, 0, 255, 255), width=2),
             name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
         )
 
@@ -511,6 +542,27 @@ class MainWindow(QWidget):
             brush=pg.mkBrush(color=(0, 0, 0, 15)),
         )
         plot_widget.addItem(polygon)
+
+        plot_widget.plot(
+            self.list_value_x,
+            self.list_value_y_bearing_line,
+            pen=pg.mkPen((0, 255, 0, 255), width=2),
+            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+        )
+
+        x_gr = []
+        y_gr = []
+        for item in self.list_value_y_track_thinning:
+            x_gr.append(item["x"])
+            y_gr.append(item["value"])
+        plot_widget.plot(
+            x_gr,
+            y_gr,
+            pen=pg.mkPen("r", width=2),
+            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+        )
+
+        print(self.list_record_planned_thinning)
 
         # for key, item in self.graph.dict_line.items():
 

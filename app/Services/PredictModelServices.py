@@ -167,6 +167,124 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error clear train data: {str(e)}")
 
+    def initialize_base_line_graph(self, x_start: float = None, x_end: float = None, step: float = None) -> None:
+        """Initialize base lines for plotting (logging and economic minimum).
+
+        Generates x-values over a specified range and predicts y-values for minimum logging,
+        maximum logging, and economic minimum lines using the prediction model.
+
+        Args:
+            x_start (float, optional): Starting x-value for the range. Defaults to None (uses model’s x_min).
+            x_end (float, optional): Ending x-value for the range. Defaults to None (uses model’s x_max).
+            step (float, optional): Step size between x-values. Defaults to None (uses model’s step).
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or required line models are missing.
+        """
+        try:
+            self.predict_model.initialize_base_line_graph(x_start=x_start, x_end=x_end, step=step)
+        except Exception as e:
+            raise Exception(f"Error initialize base line graph: {str(e)}")
+
+    def get_base_lines_graph(self) -> tuple[list[float], list[float], list[float], list[float]]:
+        """Retrieve x-values and y-values for base lines (logging and economic minimum).
+
+        Returns the x-values and predicted y-values for minimum logging, maximum logging,
+        and economic minimum lines for plotting.
+
+        Returns:
+            tuple[list[float], list[float], list[float], list[float]]: A tuple containing:
+                - List of x-values.
+                - List of y-values for minimum logging line.
+                - List of y-values for maximum logging line.
+                - List of y-values for economic minimum line.
+
+        Raises:
+            Exception: If the base lines have not been initialized or an error occurs.
+        """
+        try:
+            result = self.predict_model.get_base_lines_graph()
+            return result
+        except Exception as e:
+            raise Exception(f"Error get base lines graph: {str(e)}")
+
+    def set_bearing_parameter(self, bearing_parameter: float = None) -> None:
+        """Set the bearing parameter for the growth line prediction.
+
+        Assigns the bearing parameter either as the provided value or computes it based
+        on the model’s logging lines if none is provided.
+
+        Args:
+            bearing_parameter (float, optional): The bearing parameter value. Defaults to None.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs while setting the bearing parameter.
+        """
+        try:
+            self.predict_model.set_bearing_parameter(bearing_parameter=bearing_parameter)
+        except Exception as e:
+            raise Exception(f"Error set bearing parameter: {str(e)}")
+
+    def initialize_bearing_line(self) -> None:
+        """Initialize the bearing line for growth prediction.
+
+        Generates y-values for the growth line using the current bearing parameter over
+        the model’s x-value range.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model or bearing parameter is not initialized.
+        """
+        try:
+            self.predict_model.initialize_bearing_line()
+        except Exception as e:
+            raise Exception(f"Error initialize bearing line: {str(e)}")
+
+    def get_bearing_line(self) -> list[float]:
+        """Retrieve the y-values of the bearing line.
+
+        Returns the predicted y-values for the growth line, initializing the line if necessary.
+
+        Returns:
+            list[float]: The y-values of the bearing line.
+
+        Raises:
+            Exception: If an error occurs while retrieving or initializing the bearing line.
+        """
+        try:
+            result = self.predict_model.get_bearing_line()
+            return result
+        except Exception as e:
+            raise Exception(f"Error get bearing line: {str(e)}")
+
+    def simulation_thinning(self) -> tuple[list[float], list[dict]]:
+        """Simulate forest thinning based on growth and logging predictions.
+
+        Runs a thinning simulation using the model’s growth, recovery, logging, and economic
+        lines, tracking the forest’s state and recording thinning events.
+
+        Returns:
+            tuple[list[dict], list[dict]]: A tuple containing:
+                - List of dictionaries with 'x' and 'value' keys for the growth track.
+                - List of dictionaries with 'x', 'past_value', and 'new_value' keys for thinning events.
+
+        Raises:
+            Exception: If the model or required lines are not initialized.
+        """
+        try:
+            result = self.predict_model.simulation_thinning()
+            return result
+        except Exception as e:
+            raise Exception(f"Error simulation thinning: {str(e)}")
+
     def save_model(self) -> None:
         """Save the trained prediction model.
 
