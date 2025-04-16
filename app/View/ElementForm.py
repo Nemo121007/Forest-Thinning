@@ -9,7 +9,7 @@ from typing import Any
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit
 from PySide6.QtGui import QColor, QPalette, QCloseEvent
 from PySide6.QtCore import Signal
-from ..background_information.Type_settings import TypeSettings
+from ..background_information.TypeSettings import TypeSettings
 
 
 class ElementForm(QWidget):

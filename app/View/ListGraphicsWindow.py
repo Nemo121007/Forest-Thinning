@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtCore import Qt
-from ..background_information.Type_settings import TypeSettings
+from ..background_information.TypeSettings import TypeSettings
 from .AddForest import AddForest
 from .CreateForm import CreateForm
 from .UpdateForm import UpdateForm

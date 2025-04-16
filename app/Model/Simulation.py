@@ -16,7 +16,7 @@ The module implements mathematical models for:
 import numpy as np
 
 from .Graph import Graph
-from ..background_information.Type_line import Type_line
+from ..background_information.TypeLine import Type_line
 
 
 class Simulation:

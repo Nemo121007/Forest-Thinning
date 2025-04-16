@@ -12,7 +12,7 @@ import numpy as np
 from ...background_information.Paths import Paths
 
 from .Line import Line
-from ...background_information.Type_line import Type_line
+from ...background_information.TypeLine import Type_line
 from ...background_information.Settings import Settings
 
 

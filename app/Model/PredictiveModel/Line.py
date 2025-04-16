@@ -7,7 +7,7 @@ logging) and uses polynomial regression to fit and predict values based on input
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-from ...background_information.Type_line import Type_line
+from ...background_information.TypeLine import Type_line
 from ...background_information.Settings import Settings
 
 

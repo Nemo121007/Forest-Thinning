@@ -29,7 +29,7 @@ from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
 from ..Services.GraphicsService import GraphicsService
 from ..Services.PredictModelServices import PredictModelService
-from ..background_information.Type_line import Type_line
+from ..background_information.TypeLine import Type_line
 
 
 class MainWindow(QWidget):

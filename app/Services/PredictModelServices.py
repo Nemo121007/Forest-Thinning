@@ -5,7 +5,7 @@ and querying of prediction models for graphics data associated with areas, breed
 """
 
 from .ReferenceDataManagerService import ReferenceDataManagerServices
-from ..background_information.Type_line import Type_line
+from ..background_information.TypeLine import Type_line
 
 
 class PredictModelService:
