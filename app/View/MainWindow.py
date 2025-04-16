@@ -23,7 +23,7 @@ from PySide6.QtGui import QColor, QPalette
 import sys
 import pyqtgraph as pg
 
-from .list_graphics_window import ListGraphicsWindow
+from .ListGraphicsWindow import ListGraphicsWindow
 from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService

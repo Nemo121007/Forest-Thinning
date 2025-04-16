@@ -8,7 +8,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 # from app.View.main_screen import MainWindow  # noqa: F401
-from app.View.list_graphics_window import ListGraphicsWindow
+from app.View.ListGraphicsWindow import ListGraphicsWindow
 
 if __name__ == "__main__":
     # app = QApplication(sys.argv)
