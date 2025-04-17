@@ -301,7 +301,7 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get bearing line: {str(e)}")
 
-    def simulation_thinning(self) -> tuple[list[float], list[dict]]:
+    def simulation_thinning(self) -> tuple[dict[str, list[float]], list[dict[str, float]]]:
         """Simulate forest thinning based on growth and logging predictions.
 
         Runs a thinning simulation using the model’s growth, recovery, logging, and economic

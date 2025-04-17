@@ -637,7 +637,7 @@ class Graph:
         )
         return result_x, result_y
 
-    def simulation_thinning(self) -> None:
+    def simulation_thinning(self) -> tuple[dict[str, list[float]], list[dict[str, float]]]:
         """Simulate forest thinning based on growth and logging lines.
 
         Tracks the forest’s growth along the bearing line, triggers thinning when the value
@@ -645,8 +645,8 @@ class Graph:
         post-thinning. Records the growth track and thinning events.
 
         Returns:
-            tuple[list[dict], list[dict]]: A tuple containing:
-                - List of dictionaries with 'x' and 'value' keys for the growth track.
+            tuple[dict[str, list[float]], list[dict[str, float]]]: A tuple containing:
+                - dict of list with 'x' and 'y' keys for the growth track.
                 - List of dictionaries with 'x', 'past_value', and 'new_value' keys for thinning events.
 
         Raises:
@@ -656,7 +656,8 @@ class Graph:
             list_value_x = [x for x in self.list_value_x if x <= self.age_thinning_save]
         else:
             list_value_x = [x for x in self.list_value_x if x <= self.age_thinning]
-        result_track: list[float] = []
+        result_track_x: list[float] = []
+        result_track_y: list[float] = []
         list_record_planned_thinning = []
         start_parameter = self.bearing_value_parameter
         current_value = self.bearing_value_parameter
@@ -672,10 +673,9 @@ class Graph:
                 )
                 if current_value < self.list_value_y_min_logging[current_index]:
                     current_value = self.list_value_y_min_logging[current_index]
-            # if new_current_value is not None:
-            #     current_value = new_current_value
 
-            result_track.append({"x": list_value_x[current_index], "value": current_value})
+            result_track_x.append(list_value_x[current_index])
+            result_track_y.append(current_value)
 
             if (
                 current_value >= self.bearing_value_y_line[current_index]
@@ -691,23 +691,20 @@ class Graph:
                     }
                 )
                 current_value = self.list_value_y_min_logging[current_index]
-                result_track.append({"x": list_value_x[current_index], "value": current_value})
-        result_track.append({"x": list_value_x[current_index], "value": current_value})
+                result_track_x.append(list_value_x[current_index])
+                result_track_y.append(current_value)
+        list_record_planned_thinning.append(
+            {
+                "x": list_value_x[current_index],
+                "past_value": current_value,
+                "new_value": 0.000000000001,
+            }
+        )
 
-        return result_track, list_record_planned_thinning
-
-
-if __name__ == "__main__":
-    a = Graph("pine_sorrel")
-    a.load_graph_from_tar()
-    a.fit_models()
-    a.load_graph_from_tar(test_mark=True)
-    a.check_graph()
-
-    print("Check save graph")
-    a.save_graph()
-    a = Graph("pine_sorrel")
-    a.load_graph()
-    a.load_graph_from_tar(test_mark=True)
-    a.check_graph()
-    print(a)
+        return (
+            {
+                "x": result_track_x,
+                "y": result_track_y,
+            },
+            list_record_planned_thinning,
+        )

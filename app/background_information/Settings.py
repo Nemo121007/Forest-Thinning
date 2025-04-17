@@ -22,3 +22,5 @@ class Settings:
     DEGREE_APPROXIMATION: int = 5
 
     STEP_PLOTTING_GRAPH: int = 0.5
+
+    INCREASE_GRAPHIC: float = 0.01
