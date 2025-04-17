@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QComboBox,
     QLineEdit,
+    QCheckBox,
 )
 from PySide6.QtGui import QColor, QPalette
 import sys
@@ -29,7 +30,8 @@ from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
 from ..Services.GraphicsService import GraphicsService
 from ..Services.PredictModelServices import PredictModelService
-from ..background_information.TypeLine import Type_line
+from ..background_information.TypeLine import TypeLine
+from ..background_information.TypeSettings import TypeSettings
 
 
 class MainWindow(QWidget):
@@ -89,6 +91,8 @@ class MainWindow(QWidget):
 
         self.name_area: str = None
         self.name_breed: str = None
+        self.age_thinning: float = None
+        self.age_thinning_save: float = None
         self.name_condition: str = None
         self.name_graphic: str = None
         self.name_graphic_code: str = None
@@ -100,6 +104,7 @@ class MainWindow(QWidget):
         self.x_max: float = None
         self.y_min: float = None
         self.y_max: float = None
+        self.start_parameter: float = None
         self.list_value_x: list[float] = None
         self.list_value_y_min_logging: list[float] = None
         self.list_value_y_max_logging: list[float] = None
@@ -130,9 +135,11 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-        self.set_list_parameter()
+        self.replace_graphic()
 
-        self._update_graphic()
+        # self.set_list_parameter()
+
+        # self._update_graphic()
 
     def create_header(self) -> QWidget:
         """Create the header panel with action buttons.
@@ -222,6 +229,11 @@ class MainWindow(QWidget):
         forest_area = QLabel("Лесной район")
         forest_combo = QComboBox()
         self.form_combo_area = forest_combo
+        forest_combo.currentTextChanged.connect(
+            lambda: self.replace_graphic(
+                type_changed_parameter=TypeSettings.AREA, new_value_parameter=forest_combo.currentText()
+            )
+        )
         forest_widget.addWidget(forest_area)
         forest_widget.addWidget(forest_combo)
         main_setting.addLayout(forest_widget, 0, 0)
@@ -231,6 +243,11 @@ class MainWindow(QWidget):
         main_breed = QLabel("Основная порода")
         breed_combo = QComboBox()
         self.form_combo_breed = breed_combo
+        breed_combo.currentTextChanged.connect(
+            lambda: self.replace_graphic(
+                type_changed_parameter=TypeSettings.BREED, new_value_parameter=breed_combo.currentText()
+            )
+        )
         breed_widget.addWidget(main_breed)
         breed_widget.addWidget(breed_combo)
         main_setting.addLayout(breed_widget, 0, 1)
@@ -240,6 +257,11 @@ class MainWindow(QWidget):
         type_conditions = QLabel("Тип условий")
         conditions_combo = QComboBox()
         self.form_combo_condition = conditions_combo
+        conditions_combo.currentTextChanged.connect(
+            lambda: self.replace_graphic(
+                type_changed_parameter=TypeSettings.CONDITION, new_value_parameter=conditions_combo.currentText()
+            )
+        )
         conditions_widget.addWidget(type_conditions)
         conditions_widget.addWidget(conditions_combo)
         main_setting.addLayout(conditions_widget, 1, 0)
@@ -247,9 +269,11 @@ class MainWindow(QWidget):
         # Виджет для защитного леса
         save_widget = QVBoxLayout()
         save_forest = QLabel("Защитный лес")
-        save_combo = QComboBox()
+        save_check_box = QCheckBox()
+        save_check_box.setChecked(self.flag_save_forest)
+        save_check_box.stateChanged.connect(lambda: self.replace_predict(flag_safe_forest=save_check_box.isChecked()))
         save_widget.addWidget(save_forest)
-        save_widget.addWidget(save_combo)
+        save_widget.addWidget(save_check_box)
         main_setting.addLayout(save_widget, 1, 1)
 
         main_setting_widget.setLayout(main_setting)
@@ -266,12 +290,15 @@ class MainWindow(QWidget):
         start_parameter_widget = QLabel("Возраст")
         start_parameter_edit_field = QLineEdit()
         self.start_parameter_edit_field = start_parameter_edit_field
+        start_parameter_edit_field.textChanged.connect(
+            lambda: self.replace_predict(start_parameter=start_parameter_edit_field.text())
+        )
         start_parameter_layout.addWidget(start_parameter_widget)
         start_parameter_layout.addWidget(start_parameter_edit_field)
         current_settings.addWidget(start_parameter_layout_widget, 0, 0)
 
         auto_mode = QPushButton("Автоматический режим")
-        auto_mode.clicked.connect(lambda: self.update_graphic(start_parameter=self.start_parameter_edit_field.text()))
+        auto_mode.clicked.connect(lambda: self.replace_predict())
         current_settings.addWidget(auto_mode, 0, 1)
         start_value = QLabel("Начальная полнота")
         current_settings.addWidget(start_value, 1, 0)
@@ -296,81 +323,6 @@ class MainWindow(QWidget):
         info.setLayout(info_layout)
 
         return info
-
-    def set_list_parameter(self) -> None:
-        """Populate combo boxes with area, breed, and condition data.
-
-        Retrieves lists of areas, breeds, and conditions from services, populates the
-        respective combo boxes, and sets the current selections. Loads the initial
-        graphic code and prediction model.
-
-        Returns:
-            None
-        """
-        self.list_areas = self.manager_areas.get_list_areas()
-        self.list_breeds = self.manager_breeds.get_list_breeds()
-        self.list_conditions = self.manager_conditions.get_list_conditions()
-        self.form_combo_area.addItems(self.list_areas)
-        self.form_combo_breed.addItems(self.list_breeds)
-        self.form_combo_condition.addItems(self.list_conditions)
-        self.name_area = self.form_combo_area.currentText()
-        self.name_breed = self.form_combo_breed.currentText()
-        self.name_condition = self.form_combo_condition.currentText()
-        self.name_graphic_code = self.manager_graphic.get_value_graphic(
-            name_area=self.name_area, name_breed=self.name_breed, name_condition=self.name_condition
-        )
-        self.load_predict_model()
-
-    def update_graphic(self, start_parameter: str) -> None:
-        """Update the graphic data with a new bearing parameter.
-
-        Sets the bearing parameter in the prediction model, initializes the bearing line,
-        retrieves the bearing line data, runs a thinning simulation, and updates the plot
-        with the new data.
-
-        Args:
-            start_parameter (str): The starting parameter value (converted to float) for the bearing line.
-
-        Returns:
-            None
-
-        Raises:
-            ValueError: If the start_parameter cannot be converted to a float.
-        """
-        start_parameter = float(start_parameter)
-        self.predict_model.set_bearing_parameter(bearing_parameter=start_parameter)
-        self.predict_model.initialize_bearing_line()
-        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
-        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
-        self._update_graphic()
-
-    def load_predict_model(self) -> None:
-        """Load the prediction model and update plotting data.
-
-        Initializes the prediction model with the current area, breed, condition, and
-        protective forest flag, loads the model, and retrieves data for plotting
-        (x/y ranges and prediction lines).
-
-        Returns:
-            None
-        """
-        self.predict_model.initialize_predict_model(
-            area=self.name_area,
-            breed=self.name_breed,
-            condition=self.name_condition,
-            flag_save_forest=self.flag_save_forest,
-        )
-        self.predict_model.load_model()
-        self.x_min, self.x_max, self.y_min, self.y_max = self.predict_model.get_min_max_value()
-        self.predict_model.initialize_base_line_graph(x_start=self.x_min, x_end=self.x_max)
-        (
-            self.list_value_x,
-            self.list_value_y_min_logging,
-            self.list_value_y_max_logging,
-            self.list_value_y_min_economic,
-        ) = self.predict_model.get_base_lines_graph()
-        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
-        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
 
     def create_main_part(self) -> QWidget:
         """Create the main content area with plot and info blocks.
@@ -521,19 +473,19 @@ class MainWindow(QWidget):
             self.list_value_x,
             self.list_value_y_min_logging,
             pen=pg.mkPen((0, 0, 255, 255), width=2),
-            name=f"Line {Type_line.MIN_LEVEL_LOGGING.value}",
+            name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
         )
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_max_logging,
             pen=pg.mkPen((0, 0, 255, 255), width=2),
-            name=f"Line {Type_line.ECONOMIC_MAX_LINE.value}",
+            name=f"Line {TypeLine.ECONOMIC_MAX_LINE.value}",
         )
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_economic,
             pen=pg.mkPen((255, 0, 255, 255), width=2),
-            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+            name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
 
         polygon = pg.FillBetweenItem(
@@ -547,7 +499,7 @@ class MainWindow(QWidget):
             self.list_value_x,
             self.list_value_y_bearing_line,
             pen=pg.mkPen((0, 255, 0, 255), width=2),
-            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+            name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
 
         x_gr = []
@@ -559,14 +511,14 @@ class MainWindow(QWidget):
             x_gr,
             y_gr,
             pen=pg.mkPen("r", width=2),
-            name=f"Line {Type_line.ECONOMIC_MIN_LINE.value}",
+            name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
 
         print(self.list_record_planned_thinning)
 
         # for key, item in self.graph.dict_line.items():
 
-        #         plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {type_line.value}")
+        #         plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {TypeLine.value}")
 
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")
@@ -576,6 +528,161 @@ class MainWindow(QWidget):
             self.graphic_layout.itemAt(0).widget().setParent(None)
 
         self.graphic_layout.addWidget(plot_widget)
+
+    def replace_graphic(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
+        """Replace the current graphic with updated area, breed, or condition.
+
+        Updates combo box selections, reinitializes the prediction model with the current
+        area, breed, condition, and forest mode, loads the model, retrieves plotting data,
+        and updates the prediction and plot.
+
+        Args:
+            type_changed_parameter (TypeSettings, optional): The type of parameter changed (AREA, BREED, CONDITION).
+            Defaults to None.
+            new_value_parameter (str, optional): The new value for the changed parameter. Defaults to None.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If one of type_changed_parameter or new_value_parameter is provided without the other.
+        """
+        if (type_changed_parameter is not None and new_value_parameter is None) or (
+            type_changed_parameter is None and new_value_parameter is not None
+        ):
+            raise ValueError("Both parameters must be provided or both must be None.")
+
+        self.changed_combo_boxes()
+
+        self.age_thinning = self.manager_breeds.get_age_thinning_breed(name=self.name_breed)
+        self.age_thinning_save = self.manager_breeds.get_age_thinning_save_breed(name=self.name_breed)
+
+        self.predict_model.initialize_predict_model(
+            area=self.name_area,
+            breed=self.name_breed,
+            condition=self.name_condition,
+            flag_save_forest=self.flag_save_forest,
+        )
+        self.predict_model.load_model()
+        self.x_min, self.x_max, self.y_min, self.y_max = self.predict_model.get_min_max_value()
+        self.predict_model.initialize_base_line_graph(x_start=self.x_min, x_end=self.x_max)
+        (
+            self.list_value_x,
+            self.list_value_y_min_logging,
+            self.list_value_y_max_logging,
+            self.list_value_y_min_economic,
+        ) = self.predict_model.get_base_lines_graph()
+
+        self.replace_predict()
+
+    def changed_combo_boxes(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
+        """Update combo box selections based on a changed parameter.
+
+        Updates the area, breed, and condition selections in the UI combo boxes based on the
+        changed parameter type (area, breed, or condition) and its new value, ensuring valid
+        combinations from the services. Refreshes combo box contents without triggering signals.
+
+        Args:
+            type_changed_parameter (TypeSettings, optional): The type of parameter changed (AREA, BREED, CONDITION).
+            Defaults to None (uses AREA).
+            new_value_parameter (str, optional): The new value for the changed parameter. Defaults to None.
+
+        Returns:
+            None
+        """
+        if type_changed_parameter is None:
+            type_changed_parameter = TypeSettings.AREA
+
+        if type_changed_parameter == TypeSettings.AREA:
+            self.list_areas = self.manager_areas.get_list_allowed_areas()
+            if new_value_parameter is not None:
+                self.name_area = new_value_parameter
+            else:
+                self.name_area = self.list_areas[0]
+
+            self.list_breeds = self.manager_breeds.get_list_allowed_breeds(area=self.name_area)
+            self.name_breed = self.list_breeds[0]
+
+            self.list_conditions = self.manager_conditions.get_list_allowed_condition(
+                area=self.name_area, breed=self.name_breed
+            )
+            self.name_condition = self.list_conditions[0]
+        elif type_changed_parameter == TypeSettings.BREED:
+            self.name_breed = new_value_parameter
+            self.list_breeds = self.manager_breeds.get_list_allowed_breeds()
+
+            self.list_areas = self.manager_areas.get_list_allowed_areas(breed=self.name_breed)
+            self.name_area = self.list_areas[0]
+
+            self.list_conditions = self.manager_conditions.get_list_allowed_condition(
+                area=self.name_area, breed=self.name_breed
+            )
+            self.name_condition = self.list_conditions[0]
+        elif type_changed_parameter == TypeSettings.CONDITION:
+            self.name_condition = new_value_parameter
+            self.list_conditions = self.manager_conditions.get_list_allowed_condition()
+
+            self.list_areas = self.manager_areas.get_list_allowed_areas(condition=self.name_condition)
+            self.name_area = self.list_areas[0]
+
+            self.list_breeds = self.manager_breeds.get_list_allowed_breeds(
+                area=self.name_area, condition=self.name_condition
+            )
+            self.name_breed = self.list_breeds[0]
+
+        self.form_combo_area.blockSignals(True)
+        self.form_combo_breed.blockSignals(True)
+        self.form_combo_condition.blockSignals(True)
+
+        self.form_combo_area.clear()
+        self.form_combo_area.addItems(self.list_areas)
+        self.form_combo_area.setCurrentText(self.name_area)
+        self.form_combo_breed.clear()
+        self.form_combo_breed.addItems(self.list_breeds)
+        self.form_combo_breed.setCurrentText(self.name_breed)
+        self.form_combo_condition.clear()
+        self.form_combo_condition.addItems(self.list_conditions)
+        self.form_combo_condition.setCurrentText(self.name_condition)
+
+        self.form_combo_area.blockSignals(False)
+        self.form_combo_breed.blockSignals(False)
+        self.form_combo_condition.blockSignals(False)
+
+    def replace_predict(self, start_parameter: str = None, flag_safe_forest: bool = False) -> None:
+        """Update prediction data with new bearing parameter or forest mode.
+
+        Updates the bearing parameter and protective forest flag, initializes the bearing
+        line, runs a thinning simulation, and refreshes the plot. Sets the initial bearing
+        parameter from the model if not provided.
+
+        Args:
+            start_parameter (str, optional): The new bearing parameter value (converted to float). Defaults to None.
+            flag_safe_forest (bool, optional): Indicates protective forest mode. Defaults to False.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If start_parameter cannot be converted to a float when provided.
+        """
+        if self.start_parameter is None and start_parameter is None:
+            self.start_parameter = int(self.predict_model.get_bearing_parameter())
+
+            self.start_parameter_edit_field.blockSignals(True)
+            self.start_parameter_edit_field.setText(str(self.start_parameter))
+            self.start_parameter_edit_field.blockSignals(False)
+        if start_parameter is not None and float(start_parameter) != float(self.start_parameter):
+            self.start_parameter = float(start_parameter)
+        self.predict_model.set_bearing_parameter(bearing_parameter=self.start_parameter)
+        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
+
+        if flag_safe_forest is not None and flag_safe_forest != self.flag_save_forest:
+            self.flag_save_forest = flag_safe_forest
+            self.predict_model.set_flag_save_forest(flag_save_forest=self.flag_save_forest)
+
+        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
+
+        self._update_graphic()
 
 
 if __name__ == "__main__":

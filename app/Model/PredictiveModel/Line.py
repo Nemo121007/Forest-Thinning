@@ -7,7 +7,7 @@ logging) and uses polynomial regression to fit and predict values based on input
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-from ...background_information.TypeLine import Type_line
+from ...background_information.TypeLine import TypeLine
 from ...background_information.Settings import Settings
 
 
@@ -16,12 +16,12 @@ class Line:
 
     Handles data storage, fitting, and prediction for a specific line type, using polynomial
     features and linear regression. Supports growth, recovery, and other line types defined
-    by Type_line, with configurable approximation degree from Settings.
+    by TypeLine, with configurable approximation degree from Settings.
 
     Attributes:
         polynomial_features (PolynomialFeatures): The polynomial feature transformer.
         polynomial_regression (LinearRegression): The linear regression model for predictions.
-        type_line (Type_line): The type of line (e.g., growth, logging).
+        type_line (TypeLine): The type of line (e.g., growth, logging).
         X (np.ndarray): Array of x-values for training data.
         Y (np.ndarray): Array of y-values for training data.
         start_parameter (np.ndarray): Array of starting parameters for training data.
@@ -31,7 +31,7 @@ class Line:
         self,
         polynomial_features: PolynomialFeatures = None,
         polynomial_regression: LinearRegression = None,
-        type_line: Type_line = None,
+        type_line: TypeLine = None,
     ):
         """Initialize the Line model.
 
@@ -41,7 +41,7 @@ class Line:
         Args:
             polynomial_features (PolynomialFeatures, optional): Custom polynomial feature transformer. Defaults to None.
             polynomial_regression (LinearRegression, optional): Custom linear regression model. Defaults to None.
-            type_line (Type_line, optional): The type of line to model. Defaults to None.
+            type_line (TypeLine, optional): The type of line to model. Defaults to None.
 
         Returns:
             None
@@ -49,7 +49,7 @@ class Line:
         # TODO: Настроить степень аппроксимации
         self.polynomial_features = polynomial_features or PolynomialFeatures(degree=Settings.DEGREE_APPROXIMATION)
         self.polynomial_regression = polynomial_regression or LinearRegression()
-        self.type_line: Type_line = type_line
+        self.type_line: TypeLine = type_line
         self.X: np.ndarray = np.array([])
         self.Y: np.ndarray = np.array([])
         self.start_parameter: np.ndarray = np.array([])
@@ -58,7 +58,7 @@ class Line:
         self,
         polynomial_features: PolynomialFeatures = None,
         polynomial_regression: LinearRegression = None,
-        type_line: Type_line = None,
+        type_line: TypeLine = None,
     ):
         """Update the model configuration with new parameters.
 
@@ -67,7 +67,7 @@ class Line:
         Args:
             polynomial_features (PolynomialFeatures, optional): New polynomial feature transformer. Defaults to None.
             polynomial_regression (LinearRegression, optional): New linear regression model. Defaults to None.
-            type_line (Type_line, optional): New line type. Defaults to None.
+            type_line (TypeLine, optional): New line type. Defaults to None.
 
         Returns:
             None
@@ -107,9 +107,9 @@ class Line:
         add_x = np.array(X)
         add_y = np.array(Y)
 
-        if self.type_line == Type_line.GROWTH_LINE:
+        if self.type_line == TypeLine.GROWTH_LINE:
             start_parameter = add_y[0]
-        elif self.type_line == Type_line.RECOVERY_LINE:
+        elif self.type_line == TypeLine.RECOVERY_LINE:
             start_parameter = add_x[0]
         else:
             start_parameter = 0

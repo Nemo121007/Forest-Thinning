@@ -16,7 +16,7 @@ The module implements mathematical models for:
 import numpy as np
 
 from .Graph import Graph
-from ..background_information.TypeLine import Type_line
+from ..background_information.TypeLine import TypeLine
 
 
 class Simulation:
@@ -175,17 +175,17 @@ class Simulation:
             raise ValueError("x_max is None")
 
         array_x = np.arange(x_min, x_max, step)
-        array_min_logging = np.array([self.graph.predict(type_line=Type_line.MIN_LEVEL_LOGGING, X=x) for x in array_x])
-        array_max_logging = np.array([self.graph.predict(type_line=Type_line.MAX_LEVEL_LOGGING, X=x) for x in array_x])
+        array_min_logging = np.array([self.graph.predict(type_line=TypeLine.MIN_LEVEL_LOGGING, X=x) for x in array_x])
+        array_max_logging = np.array([self.graph.predict(type_line=TypeLine.MAX_LEVEL_LOGGING, X=x) for x in array_x])
         array_min_economic = np.minimum(
-            np.array([self.graph.predict(type_line=Type_line.ECONOMIC_MIN_LINE, X=x) for x in array_x]),
+            np.array([self.graph.predict(type_line=TypeLine.ECONOMIC_MIN_LINE, X=x) for x in array_x]),
             array_max_logging,
         )
         array_min_economic = np.maximum(array_min_economic, array_min_logging)
         array_standard = np.minimum(
             np.array(
                 [
-                    self.graph.predict(type_line=Type_line.GROWTH_LINE, X=x, start_parameter=self.start_value)
+                    self.graph.predict(type_line=TypeLine.GROWTH_LINE, X=x, start_parameter=self.start_value)
                     for x in array_x
                 ]
             ),
@@ -211,10 +211,10 @@ class Simulation:
     # flag_thinning = False
     # step = self.array_x[1] - self.array_x[0]
     # while current_x < self.end_x:
-    #     if current_value > self.graph.predict(type_line=Type_line.ECONOMIC_MIN_LINE,
+    #     if current_value > self.graph.predict(type_line=TypeLine.ECONOMIC_MIN_LINE,
     #                                           X= current_x):
     #         flag_thinning = True
-    #         new_value = self.graph.predict(type_line=Type_line.MIN_LEVEL_LOGGING,
+    #         new_value = self.graph.predict(type_line=TypeLine.MIN_LEVEL_LOGGING,
     #                                        X= current_x)
     #         self.thinning_forest[current_x] = {
     #             "past_value": current_value,
@@ -222,11 +222,11 @@ class Simulation:
     #         }
     #         start_value = current_x
     #     elif not flag_thinning:
-    #         current_value = self.graph.predict(type_line=Type_line.GROWTH_LINE,
+    #         current_value = self.graph.predict(type_line=TypeLine.GROWTH_LINE,
     #                                            X= current_x,
     #                                            start_parameter= start_value)
     #     else:
-    #         current_value = self.graph.predict(type_line=Type_line.RECOVERY_LINE,
+    #         current_value = self.graph.predict(type_line=TypeLine.RECOVERY_LINE,
     #                                            X= current_x,
     #                                            start_parameter= start_value)
     #     current_x += step
@@ -267,7 +267,7 @@ class Simulation:
                 current_value = self.preprocessing_value["standard"][current_index]
             else:
                 current_value = self.graph.predict(
-                    type_line=Type_line.RECOVERY_LINE,
+                    type_line=TypeLine.RECOVERY_LINE,
                     X=self.preprocessing_value["array_x"][current_index],
                     start_parameter=start_index,
                 )

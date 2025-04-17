@@ -154,6 +154,7 @@ class Conditions(ReferenceEntity):
                             + f"{self._graphics._breeds.get_value(breed)}_"
                             + f"{code}"
                         )
+                        self._graphics.rename_graphic(old_name_graphic=old_file_name, new_name_graphic=new_file_name)
                         self._graphics.update_name_file_graphic(old_name=old_file_name, new_name=new_file_name)
                         del self._graphics._data[(area, breed, old_name)]
                         self._graphics._data[(area, breed, name)] = value

@@ -12,7 +12,7 @@ import numpy as np
 from ...background_information.Paths import Paths
 
 from .Line import Line
-from ...background_information.TypeLine import Type_line
+from ...background_information.TypeLine import TypeLine
 from ...background_information.Settings import Settings
 
 
@@ -25,7 +25,7 @@ class Graph:
 
     Attributes:
         name (str): The name of the graph (file name).
-        dict_line (dict[Type_line, Line]): Dictionary mapping line types to Line models.
+        dict_line (dict[TypeLine, Line]): Dictionary mapping line types to Line models.
         area (str): The name of the area.
         code_area (str): The code for the area.
         breed (str): The name of the breed.
@@ -51,7 +51,7 @@ class Graph:
             None
         """
         self.name: str = None
-        self.dict_line: dict[Type_line, Line] = {}
+        self.dict_line: dict[TypeLine, Line] = {}
         self.area: str = None
         self.code_area: str = None
         self.breed: str = None
@@ -104,7 +104,7 @@ class Graph:
             None
         """
         self.name: str = name
-        self.dict_line: dict[Type_line, Line] = {}
+        self.dict_line: dict[TypeLine, Line] = {}
         self.area: str = area
         self.code_area: str = None
         self.breed: str = breed
@@ -155,9 +155,9 @@ class Graph:
         if self.x_max is None or self.x_min is None:
             raise Exception("Graph is not loaded or not initialize")
         if (
-            Type_line.MIN_LEVEL_LOGGING not in self.dict_line
-            or Type_line.MAX_LEVEL_LOGGING not in self.dict_line
-            or Type_line.ECONOMIC_MIN_LINE not in self.dict_line
+            TypeLine.MIN_LEVEL_LOGGING not in self.dict_line
+            or TypeLine.MAX_LEVEL_LOGGING not in self.dict_line
+            or TypeLine.ECONOMIC_MIN_LINE not in self.dict_line
         ):
             raise Exception("Graph is not loaded model predicted line")
         if x_start is None:
@@ -169,14 +169,28 @@ class Graph:
 
         self.list_value_x = np.arange(self.x_min, self.x_max + step, step).tolist()
         self.list_value_y_min_logging = self.predict_list_value(
-            type_line=Type_line.MIN_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
+            type_line=TypeLine.MIN_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
         )
         self.list_value_y_max_logging = self.predict_list_value(
-            type_line=Type_line.MAX_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
+            type_line=TypeLine.MAX_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
         )
         self.list_value_y_min_economic = self.predict_list_value(
-            type_line=Type_line.ECONOMIC_MIN_LINE, X=self.list_value_x, start_parameter=0
+            type_line=TypeLine.ECONOMIC_MIN_LINE, X=self.list_value_x, start_parameter=0
         )
+
+    def set_flag_save_forest(self, flag_save_forest: bool = False) -> None:
+        """Set the protective forest mode flag for the graph.
+
+        Updates the flag to enable or disable protective forest mode, which affects thinning
+        age limits in simulations.
+
+        Args:
+            flag_save_forest (bool, optional): Indicates protective forest mode. Defaults to False.
+
+        Returns:
+            None
+        """
+        self.flag_save_forest = flag_save_forest
 
     def get_base_lines_graph(self) -> tuple[list[float], list[float], list[float], list[float]]:
         """Retrieve the x-values and y-values for base lines (logging and economic minimum).
@@ -221,6 +235,23 @@ class Graph:
         else:
             self.bearing_value_parameter = bearing_parameter
 
+    def get_bearing_parameter(self) -> float:
+        """Retrieve the current bearing parameter for the growth line.
+
+        Returns the bearing parameter value used for growth line predictions, initializing
+        the bearing line if necessary to ensure the parameter is set.
+
+        Returns:
+            float: The current bearing parameter value.
+
+        Raises:
+            ValueError: If the bearing parameter cannot be initialized due to missing data (e.g.,
+            uninitialized x-values or logging lines).
+        """
+        if self.bearing_value_y_line is None:
+            self.initialize_bearing_line()
+        return self.bearing_value_parameter
+
     def initialize_bearing_line(self) -> None:
         """Initialize the bearing line for growth prediction.
 
@@ -236,7 +267,7 @@ class Graph:
         if self.bearing_value_parameter is None:
             self.set_bearing_parameter()
         self.bearing_value_y_line = self.predict_list_value(
-            type_line=Type_line.GROWTH_LINE, X=self.list_value_x, start_parameter=self.bearing_value_parameter
+            type_line=TypeLine.GROWTH_LINE, X=self.list_value_x, start_parameter=self.bearing_value_parameter
         )
 
     def get_bearing_line(self) -> list[float]:
@@ -250,8 +281,7 @@ class Graph:
         Raises:
             ValueError: If the bearing line cannot be initialized due to missing data.
         """
-        if self.bearing_value_y_line is None:
-            self.initialize_bearing_line()
+        self.initialize_bearing_line()
         return self.bearing_value_y_line
 
     def load_reference_info(self, code_area: str = None, code_breed: str = None, code_condition: str = None):
@@ -332,21 +362,21 @@ class Graph:
             raise ValueError("The number of arguments X and Y does not match")
 
         item = Line()
-        name_line = Type_line.give_enum_from_value(value=line["name"])
+        name_line = TypeLine.give_enum_from_value(value=line["name"])
 
         # Для построения графика достаточно MIN_LEVEL_LOGGING,
         # MAX_LEVEL_LOGGING, ECONOMIC_MIN_LINE, GROWTH_LINE и RECOVERY_LINE
         if (
-            name_line == Type_line.MIN_LEVEL_LOGGING
-            or name_line == Type_line.MAX_LEVEL_LOGGING
-            or name_line == Type_line.ECONOMIC_MIN_LINE
+            name_line == TypeLine.MIN_LEVEL_LOGGING
+            or name_line == TypeLine.MAX_LEVEL_LOGGING
+            or name_line == TypeLine.ECONOMIC_MIN_LINE
         ):
             item.load_info(type_line=name_line)
             self.dict_line[name_line] = item
-            if name_line == Type_line.ECONOMIC_MIN_LINE:
+            if name_line == TypeLine.ECONOMIC_MIN_LINE:
                 if self.y_min_economic is None or self.y_min_economic > min(all_x):
                     self.y_min_economic = min(all_x)
-        elif name_line == Type_line.GROWTH_LINE or name_line == Type_line.RECOVERY_LINE:
+        elif name_line == TypeLine.GROWTH_LINE or name_line == TypeLine.RECOVERY_LINE:
             if name_line in self.dict_line:
                 item = self.dict_line[name_line]
             else:
@@ -487,7 +517,7 @@ class Graph:
 
         dict_lines = dict(info_graph["dict_line"])
         for key, line in dict_lines.items():
-            type_line = Type_line.give_enum_from_value(line["type_line"])
+            type_line = TypeLine.give_enum_from_value(line["type_line"])
             polynomial_features = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_features"])
             polynomial_regression = joblib.load(Paths.MODEL_DIRECTORY / self.name / line["polynomial_regression"])
 
@@ -499,14 +529,14 @@ class Graph:
 
             self.dict_line[type_line] = item
 
-    def predict_value(self, type_line: Type_line, X: float, start_parameter: float = 0) -> float:
+    def predict_value(self, type_line: TypeLine, X: float, start_parameter: float = 0) -> float:
         """Predict a single y-value for a given line type and x-value.
 
         Validates the line type and start parameter, then computes the prediction using
         the corresponding Line model.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             X (float): The x-value for prediction.
             start_parameter (float, optional): Starting parameter, must be 0 for non-growth/recovery lines.
             Defaults to 0.
@@ -519,7 +549,7 @@ class Graph:
         """
         if type_line not in self.dict_line:
             raise ValueError(f"Type line {type_line} not found")
-        if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
+        if type_line != TypeLine.GROWTH_LINE and type_line != TypeLine.RECOVERY_LINE and start_parameter != 0:
             text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(text)
 
@@ -527,14 +557,14 @@ class Graph:
         result = model_line.predict_value(X, start_parameter)
         return result
 
-    def predict_list_value(self, type_line: Type_line, X: list[float], start_parameter: float = 0) -> list[float]:
+    def predict_list_value(self, type_line: TypeLine, X: list[float], start_parameter: float = 0) -> list[float]:
         """Predict y-values for a list of x-values and a line type.
 
         Validates the line type and start parameter, then computes predictions using
         the corresponding Line model.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             X (list[float]): List of x-values for prediction.
             start_parameter (float, optional): Starting parameter, must be 0 for non-growth/recovery lines.
             Defaults to 0.
@@ -547,7 +577,7 @@ class Graph:
         """
         if type_line not in self.dict_line:
             raise ValueError(f"Type line {type_line} not found")
-        if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
+        if type_line != TypeLine.GROWTH_LINE and type_line != TypeLine.RECOVERY_LINE and start_parameter != 0:
             text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(text)
 
@@ -557,7 +587,7 @@ class Graph:
 
     def predict_line(
         self,
-        type_line: Type_line,
+        type_line: TypeLine,
         start_x: float = None,
         end_x: float = None,
         step: float = None,
@@ -569,7 +599,7 @@ class Graph:
         and computes predictions using the corresponding Line model.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             start_x (float, optional): Starting x-value. Defaults to x_min or y_min_economic for economic lines.
             end_x (float, optional): Ending x-value. Defaults to x_max.
             step (float, optional): Step size between x-values. Defaults to Settings.STEP_PLOTTING_GRAPH.
@@ -583,7 +613,7 @@ class Graph:
             ValueError: If the line type is not found or start_parameter is invalid.
             Exception: If start_x is not less than end_x.
         """
-        if type_line != Type_line.GROWTH_LINE and type_line != Type_line.RECOVERY_LINE and start_parameter != 0:
+        if type_line != TypeLine.GROWTH_LINE and type_line != TypeLine.RECOVERY_LINE and start_parameter != 0:
             text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(text)
         if start_x < end_x:
@@ -591,7 +621,7 @@ class Graph:
         if type_line not in self.dict_line:
             raise ValueError(f"Type line {type_line} not found")
 
-        if type_line == Type_line.ECONOMIC_MIN_LINE:
+        if type_line == TypeLine.ECONOMIC_MIN_LINE:
             start_x = self.y_min_economic
 
         if start_x is None:
@@ -622,18 +652,22 @@ class Graph:
         Raises:
             ValueError: If required lines (bearing, logging, economic) or x-values are not initialized.
         """
+        if self.flag_save_forest:
+            list_value_x = [x for x in self.list_value_x if x <= self.age_thinning_save]
+        else:
+            list_value_x = [x for x in self.list_value_x if x <= self.age_thinning]
         result_track: list[float] = []
         list_record_planned_thinning = []
         start_parameter = self.bearing_value_parameter
         current_value = self.bearing_value_parameter
         flag_thinning = False
-        for current_index in range(len(self.list_value_x)):
+        for current_index in range(len(list_value_x)):
             if not flag_thinning:
                 current_value = self.bearing_value_y_line[current_index]
             else:
                 current_value = self.predict_value(
-                    type_line=Type_line.RECOVERY_LINE,
-                    X=self.list_value_x[current_index],
+                    type_line=TypeLine.RECOVERY_LINE,
+                    X=list_value_x[current_index],
                     start_parameter=start_parameter,
                 )
                 if current_value < self.list_value_y_min_logging[current_index]:
@@ -641,24 +675,24 @@ class Graph:
             # if new_current_value is not None:
             #     current_value = new_current_value
 
-            result_track.append({"x": self.list_value_x[current_index], "value": current_value})
+            result_track.append({"x": list_value_x[current_index], "value": current_value})
 
             if (
                 current_value >= self.bearing_value_y_line[current_index]
                 and current_value >= self.list_value_y_min_economic[current_index]
             ):
                 flag_thinning = True
-                start_parameter = self.list_value_x[current_index]
+                start_parameter = list_value_x[current_index]
                 list_record_planned_thinning.append(
                     {
-                        "x": self.list_value_x[current_index],
+                        "x": list_value_x[current_index],
                         "past_value": current_value,
                         "new_value": self.list_value_y_min_logging[current_index],
                     }
                 )
                 current_value = self.list_value_y_min_logging[current_index]
-                result_track.append({"x": self.list_value_x[current_index], "value": current_value})
-        result_track.append({"x": self.list_value_x[current_index], "value": current_value})
+                result_track.append({"x": list_value_x[current_index], "value": current_value})
+        result_track.append({"x": list_value_x[current_index], "value": current_value})
 
         return result_track, list_record_planned_thinning
 
@@ -666,7 +700,6 @@ class Graph:
 if __name__ == "__main__":
     a = Graph("pine_sorrel")
     a.load_graph_from_tar()
-    # a.load_graph_in_tar('nortTaiga_pine_lingonberry')
     a.fit_models()
     a.load_graph_from_tar(test_mark=True)
     a.check_graph()

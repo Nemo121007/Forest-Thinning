@@ -5,7 +5,7 @@ and querying of prediction models for graphics data associated with areas, breed
 """
 
 from .ReferenceDataManagerService import ReferenceDataManagerServices
-from ..background_information.TypeLine import Type_line
+from ..background_information.TypeLine import TypeLine
 
 
 class PredictModelService:
@@ -75,27 +75,25 @@ class PredictModelService:
         Returns:
             None
         """
-        self.area = area
-        self.breed = breed
-        self.condition = condition
+        area = area
+        breed = breed
+        condition = condition
 
-        self.name: str = self.manager_graphics.get_value_graphic(
-            name_area=area, name_breed=breed, name_condition=condition
-        )
+        name: str = self.manager_graphics.get_value_graphic(name_area=area, name_breed=breed, name_condition=condition)
         code_area: str = self.manager_areas.get_value(name=area)
         code_breed: str = self.manager_breeds.get_value(name=breed)
         code_condition: str = self.manager_conditions.get_value(name=condition)
-        self.age_thinning: float = self.manager_breeds.get_age_thinning(name=breed)
-        self.age_thinning_save: float = self.manager_breeds.get_age_thinning_save(name=breed)
-        self.flag_save_forest: bool = flag_save_forest
+        age_thinning: float = self.manager_breeds.get_age_thinning(name=breed)
+        age_thinning_save: float = self.manager_breeds.get_age_thinning_save(name=breed)
+        flag_save_forest: bool = flag_save_forest
 
         self.predict_model.initialize_model(
-            name=self.name,
+            name=name,
             area=area,
             breed=breed,
             condition=condition,
-            age_thinning=self.age_thinning,
-            age_thinning_save=self.age_thinning_save,
+            age_thinning=age_thinning,
+            age_thinning_save=age_thinning_save,
             flag_save_forest=flag_save_forest,
         )
         self.predict_model.load_reference_info(
@@ -134,6 +132,26 @@ class PredictModelService:
             self.predict_model.load_graph_from_tar()
         except Exception as e:
             raise Exception(f"Error load data from tar: {str(e)}")
+
+    def set_flag_save_forest(self, flag_save_forest: bool = False) -> None:
+        """Set the protective forest mode flag for the prediction model.
+
+        Updates the model to enable or disable protective forest mode, affecting thinning
+        age and simulation behavior.
+
+        Args:
+            flag_save_forest (bool, optional): Indicates protective forest mode. Defaults to False.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs while setting the flag.
+        """
+        try:
+            self.predict_model.set_flag_save_forest(flag_save_forest=flag_save_forest)
+        except Exception as e:
+            raise Exception(f"Error set flag save forest: {str(e)}")
 
     def fit_models(self) -> None:
         """Fit the prediction models using loaded data.
@@ -230,6 +248,24 @@ class PredictModelService:
             self.predict_model.set_bearing_parameter(bearing_parameter=bearing_parameter)
         except Exception as e:
             raise Exception(f"Error set bearing parameter: {str(e)}")
+
+    def get_bearing_parameter(self) -> float:
+        """Retrieve the current bearing parameter for the growth line.
+
+        Returns the bearing parameter value set in the prediction model, used for growth
+        line predictions.
+
+        Returns:
+            float: The current bearing parameter value.
+
+        Raises:
+            Exception: If the bearing parameter is not set or an error occurs during retrieval.
+        """
+        try:
+            result = self.predict_model.get_bearing_parameter()
+            return result
+        except Exception as e:
+            raise Exception(f"Error get bearing parameter: {str(e)}")
 
     def initialize_bearing_line(self) -> None:
         """Initialize the bearing line for growth prediction.
@@ -335,14 +371,14 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get min max value: {str(e)}")
 
-    def get_predict_value(self, type_line: Type_line, x: float, start_parameter: float = 0) -> float:
+    def get_predict_value(self, type_line: TypeLine, x: float, start_parameter: float = 0) -> float:
         """Predict a single value for a specified line type at a given x.
 
         Validates that start_parameter is zero for growth or recovery lines and computes
         the prediction.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             x (float): The x-value for the prediction.
             start_parameter (float, optional): Starting parameter for the prediction,
             must be 0 for growth/recovery lines. Defaults to 0.
@@ -354,7 +390,7 @@ class PredictModelService:
             ValueError: If start_parameter is non-zero for growth or recovery lines.
             Exception: If an error occurs while computing the prediction.
         """
-        if (type_line == Type_line.GROWTH_LINE or type_line == Type_line.RECOVERY_LINE) and start_parameter != 0:
+        if (type_line == TypeLine.GROWTH_LINE or type_line == TypeLine.RECOVERY_LINE) and start_parameter != 0:
             test_error = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(test_error)
         try:
@@ -363,14 +399,14 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get predict value: {str(e)}")
 
-    def get_predict_list(self, type_line: Type_line, x_list: list[float], start_parameter: float = 0) -> list[float]:
+    def get_predict_list(self, type_line: TypeLine, x_list: list[float], start_parameter: float = 0) -> list[float]:
         """Predict a list of values for a specified line type over a list of x-values.
 
         Validates that start_parameter is zero for growth or recovery lines and computes
         predictions for each x-value.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             x_list (list[float]): The list of x-values for predictions.
             start_parameter (float, optional): Starting parameter, must be 0 for growth/recovery lines. Defaults to 0.
 
@@ -381,7 +417,7 @@ class PredictModelService:
             ValueError: If start_parameter is non-zero for growth or recovery lines.
             Exception: If an error occurs while computing predictions.
         """
-        if (type_line == Type_line.GROWTH_LINE or type_line == Type_line.RECOVERY_LINE) and start_parameter != 0:
+        if (type_line == TypeLine.GROWTH_LINE or type_line == TypeLine.RECOVERY_LINE) and start_parameter != 0:
             test_error = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(test_error)
         try:
@@ -394,7 +430,7 @@ class PredictModelService:
 
     def get_predict_line(
         self,
-        type_line: Type_line,
+        type_line: TypeLine,
         start_x: float = None,
         end_x: float = None,
         step: float = None,
@@ -406,7 +442,7 @@ class PredictModelService:
         predictions for the specified x-range with the given step size.
 
         Args:
-            type_line (Type_line): The type of line to predict (e.g., growth, logging).
+            type_line (TypeLine): The type of line to predict (e.g., growth, logging).
             start_x (float, optional): The starting x-value for the range. Defaults to None.
             end_x (float, optional): The ending x-value for the range. Defaults to None.
             step (float, optional): The step size between x-values. Defaults to None.
@@ -419,7 +455,7 @@ class PredictModelService:
             ValueError: If start_parameter is non-zero for growth or recovery lines.
             Exception: If an error occurs while generating the prediction line.
         """
-        if (type_line == Type_line.GROWTH_LINE or type_line == Type_line.RECOVERY_LINE) and start_parameter != 0:
+        if (type_line == TypeLine.GROWTH_LINE or type_line == TypeLine.RECOVERY_LINE) and start_parameter != 0:
             test_error = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(test_error)
         try:

@@ -1,10 +1,10 @@
-"""Module of Type_line enum."""
+"""Module of TypeLine enum."""
 
 from enum import Enum
 import re
 
 
-class Type_line(Enum):
+class TypeLine(Enum):
     """Enum of line types.
 
     Attributes:
@@ -26,21 +26,21 @@ class Type_line(Enum):
     RECOVERY_LINE = "recovery line"
 
     @staticmethod
-    def give_enum_from_value(value: str) -> "Type_line":
+    def give_enum_from_value(value: str) -> "TypeLine":
         """Give enum from value.
 
         Args:
             value (str): Value of enum.
 
         Returns:
-            Type_line: Enum of value.
+            TypeLine: Enum of value.
         """
         if re.match(r"growth line \d+", value):
-            return Type_line.GROWTH_LINE
+            return TypeLine.GROWTH_LINE
         elif re.match(r"recovery line \d+", value):
-            return Type_line.RECOVERY_LINE
+            return TypeLine.RECOVERY_LINE
         else:
             try:
-                return Type_line(value)
+                return TypeLine(value)
             except ValueError as e:
                 raise ValueError(f"Unidentified line type\n Logs:\n {e}")
