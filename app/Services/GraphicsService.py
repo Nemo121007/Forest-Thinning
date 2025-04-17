@@ -165,6 +165,6 @@ class GraphicsService:
         try:
             self.graphics.delete_graphic(name_area=name_area, name_breed=name_breed, name_condition=name_condition)
             self.manager.save_data()
-            self.predict_model.delete_model(area=name_area, breed=name_breed, condition=name_condition)
+            # self.predict_model(area=name_area, breed=name_breed, condition=name_condition)
         except Exception as e:
             raise Exception(f"Error delete graphic {str(e)}")

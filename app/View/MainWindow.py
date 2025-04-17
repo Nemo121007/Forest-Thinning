@@ -32,6 +32,7 @@ from ..Services.GraphicsService import GraphicsService
 from ..Services.PredictModelServices import PredictModelService
 from ..background_information.TypeLine import TypeLine
 from ..background_information.TypeSettings import TypeSettings
+from ..background_information.Settings import Settings
 
 
 class MainWindow(QWidget):
@@ -198,6 +199,7 @@ class MainWindow(QWidget):
             None
         """
         self.list_graphics_window = ListGraphicsWindow()
+        self.list_graphics_window.form_closed.connect(lambda: self.replace_graphic())
         self.list_graphics_window.show()
 
     def create_info(self) -> QWidget:
@@ -459,15 +461,26 @@ class MainWindow(QWidget):
         plot_widget.setBackground("w")
 
         # Устанавливаем фиксированные пределы осей
-        plot_widget.setXRange(self.x_min, self.x_max, padding=0)  # для оси X от 0 до 120
-        plot_widget.setYRange(self.y_min, self.y_max, padding=0)  # для оси Y от 0 до 1
+        increase_x = (self.x_max - self.x_min) * Settings.INCREASE_GRAPHIC
+        increase_y = (self.y_max - self.y_min) * Settings.INCREASE_GRAPHIC
+
+        if self.flag_save_forest:
+            x_max = self.age_thinning_save
+        else:
+            x_max = self.age_thinning
+        x_min = self.x_min
+
+        plot_widget.setXRange(x_min - increase_x, x_max + increase_x, padding=0)
+        plot_widget.setYRange(self.y_min - increase_y, self.y_max + increase_y, padding=0)
 
         # Отключаем автоматическое масштабирование
         plot_widget.setAutoVisible(y=False)
         plot_widget.enableAutoRange(enable=False)
 
         # Ограничиваем возможность прокрутки
-        plot_widget.setLimits(xMin=self.x_min, xMax=self.x_max, yMin=self.y_min, yMax=self.y_max)
+        plot_widget.setLimits(
+            xMin=x_min - increase_y, xMax=x_max + increase_x, yMin=self.y_min - increase_y, yMax=self.y_max + increase_y
+        )
 
         plot_widget.plot(
             self.list_value_x,
@@ -497,21 +510,43 @@ class MainWindow(QWidget):
 
         plot_widget.plot(
             self.list_value_x,
-            self.list_value_y_bearing_line,
-            pen=pg.mkPen((0, 255, 0, 255), width=2),
-            name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
+            self.list_value_y_min_logging,
+            pen=pg.mkPen((0, 0, 255, 255), width=2),
+            name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
         )
 
-        x_gr = []
-        y_gr = []
-        for item in self.list_value_y_track_thinning:
-            x_gr.append(item["x"])
-            y_gr.append(item["value"])
+        if self.flag_save_forest:
+            target_value = self.age_thinning_save
+        else:
+            target_value = self.age_thinning
         plot_widget.plot(
-            x_gr,
-            y_gr,
+            [target_value, target_value],
+            [self.y_min, self.y_max],
+            pen=pg.mkPen((0, 0, 0, 255), width=2),
+            name="Line thinning forest",
+        )
+        plot_widget.plot(
+            [self.x_min, self.x_min],
+            [self.y_min, self.y_max],
+            pen=pg.mkPen((0, 0, 0, 255), width=2),
+            name="Line thinning forest",
+        )
+
+        end_index = next((i for i, x in enumerate(self.list_value_x) if x > target_value), len(self.list_value_x))
+        list_x = self.list_value_x[:end_index]
+        list_bearing_line = self.list_value_y_bearing_line[:end_index]
+        plot_widget.plot(
+            list_x,
+            list_bearing_line,
+            pen=pg.mkPen((0, 255, 0, 255), width=2),
+            name="Bearing line",
+        )
+
+        plot_widget.plot(
+            self.list_value_y_track_thinning.get("x"),
+            self.list_value_y_track_thinning.get("y"),
             pen=pg.mkPen("r", width=2),
-            name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
+            name="Predict line thinning",
         )
 
         print(self.list_record_planned_thinning)
@@ -553,6 +588,9 @@ class MainWindow(QWidget):
             raise ValueError("Both parameters must be provided or both must be None.")
 
         self.changed_combo_boxes()
+
+        if self.name_area is None:
+            return
 
         self.age_thinning = self.manager_breeds.get_age_thinning_breed(name=self.name_breed)
         self.age_thinning_save = self.manager_breeds.get_age_thinning_save_breed(name=self.name_breed)
@@ -598,6 +636,8 @@ class MainWindow(QWidget):
             if new_value_parameter is not None:
                 self.name_area = new_value_parameter
             else:
+                if len(self.list_areas) == 0:
+                    return
                 self.name_area = self.list_areas[0]
 
             self.list_breeds = self.manager_breeds.get_list_allowed_breeds(area=self.name_area)
@@ -671,8 +711,15 @@ class MainWindow(QWidget):
             self.start_parameter_edit_field.blockSignals(True)
             self.start_parameter_edit_field.setText(str(self.start_parameter))
             self.start_parameter_edit_field.blockSignals(False)
-        if start_parameter is not None and float(start_parameter) != float(self.start_parameter):
-            self.start_parameter = float(start_parameter)
+        if start_parameter is not None and start_parameter.replace(",", "").replace(".", "").isdigit():
+            start_parameter = start_parameter.replace(",", ".")
+            start_parameter = float(start_parameter)
+            if (
+                start_parameter > self.list_value_y_min_logging[0]
+                and start_parameter < self.list_value_y_max_logging[0]
+            ):
+                self.start_parameter = start_parameter
+
         self.predict_model.set_bearing_parameter(bearing_parameter=self.start_parameter)
         self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
 

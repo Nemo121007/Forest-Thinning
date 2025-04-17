@@ -16,8 +16,8 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QMessageBox,
 )
-from PySide6.QtGui import QColor, QPalette
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPalette, QCloseEvent
+from PySide6.QtCore import Qt, Signal
 from ..background_information.TypeSettings import TypeSettings
 from .AddForest import AddForest
 from .CreateForm import CreateForm
@@ -48,6 +48,8 @@ class ListGraphicsWindow(QWidget):
         manager_graphics (GraphicsService): Service for managing graphic entries.
         forms (list): List of open form windows (CreateForm, UpdateForm, AddForest).
     """
+
+    form_closed = Signal()
 
     def __init__(self) -> None:
         """Initialize the ListGraphicsWindow.
@@ -466,3 +468,17 @@ class ListGraphicsWindow(QWidget):
         self.manager_graphics.delete_graphic(name_area=area, name_breed=breed, name_condition=condition)
         self.refresh_ui()
         pass
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Handle the form close event.
+
+        Emits the form_closed signal and calls the parent class's closeEvent method.
+
+        Args:
+            event (QCloseEvent): The close event triggered when the form is closed.
+
+        Returns:
+            None
+        """
+        self.form_closed.emit()
+        super().closeEvent(event)
