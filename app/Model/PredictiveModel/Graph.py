@@ -693,6 +693,13 @@ class Graph:
                 current_value = self.list_value_y_min_logging[current_index]
                 result_track_x.append(list_value_x[current_index])
                 result_track_y.append(current_value)
+        list_record_planned_thinning.append(
+            {
+                "x": list_value_x[current_index],
+                "past_value": current_value,
+                "new_value": 0.000000000001,
+            }
+        )
 
         return (
             {
@@ -701,19 +708,3 @@ class Graph:
             },
             list_record_planned_thinning,
         )
-
-
-if __name__ == "__main__":
-    a = Graph("pine_sorrel")
-    a.load_graph_from_tar()
-    a.fit_models()
-    a.load_graph_from_tar(test_mark=True)
-    a.check_graph()
-
-    print("Check save graph")
-    a.save_graph()
-    a = Graph("pine_sorrel")
-    a.load_graph()
-    a.load_graph_from_tar(test_mark=True)
-    a.check_graph()
-    print(a)

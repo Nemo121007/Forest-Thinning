@@ -348,12 +348,13 @@ class MainWindow(QWidget):
 
         # Создаем контейнер для блоков информации с прокруткой
         blocks_container = QWidget()
-        blocks_container.setFixedWidth(250)
+        blocks_container.setFixedWidth(350)
         blocks_info_layout = QVBoxLayout(blocks_container)
         blocks_info_layout.setContentsMargins(5, 0, 5, 0)
 
         # Создаем виджет с прокруткой
         scroll_area = QScrollArea()
+        self.form_scroll_area = scroll_area
         scroll_area.setWidgetResizable(True)
         scroll_area.setStyleSheet("background-color: #ffffff;")
 
@@ -362,11 +363,6 @@ class MainWindow(QWidget):
         blocks_layout = QVBoxLayout(blocks_widget)
         blocks_layout.setContentsMargins(5, 5, 5, 5)
         blocks_layout.setSpacing(5)
-
-        # Добавляем несколько информационных блоков для примера
-        for _ in range(10):  # Создаем 5 блоков
-            info_block = self._create_info_block()
-            blocks_layout.addWidget(info_block)
 
         # Устанавливаем виджет с блоками в область прокрутки
         scroll_area.setWidget(blocks_widget)
@@ -382,63 +378,129 @@ class MainWindow(QWidget):
 
         return main
 
-    def _create_info_block(self) -> QWidget:
-        """Create an information block for growth and logging data.
-
-        Constructs a grid layout with labels for growth date, felling date, reserve, volume,
-        and intensity metrics, styled with a blue background.
-
-        Returns:
-            QWidget: The information block widget.
-        """
+    def _create_info_block(
+        self,
+        date_growth: float = None,
+        date_fell: float = None,
+        reserve_before: float = None,
+        reserve_after: float = None,
+    ) -> QWidget:
         main_info_block = QWidget()
         main_info_block.setStyleSheet("background-color: #DAE8FC;")
         main_info_block.setContentsMargins(5, 0, 5, 0)
-        main_info_block.setFixedWidth(250)
+        main_info_block.setFixedWidth(300)
 
         main_info_block_layout = QGridLayout(main_info_block)
         main_info_block_layout.setContentsMargins(5, 0, 5, 0)
         main_info_block_layout.setSpacing(5)
 
-        date_growth = QLabel("Дата роста")
-        date_growth.setFixedHeight(20)
-        date_growth.setFixedWidth(90)
-        main_info_block_layout.addWidget(date_growth, 0, 0)
+        date_growth_label = QLabel("Дата роста")
+        date_growth_label.setFixedHeight(20)
+        date_growth_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(date_growth_label, 0, 0)
 
-        date_fell = QLabel("Дата рубки")
-        date_fell.setFixedHeight(20)
-        date_fell.setFixedWidth(90)
-        main_info_block_layout.addWidget(date_fell, 0, 1)
+        date_growth_value = QLabel("Date")
+        date_growth_value.setFixedHeight(20)
+        date_growth_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(date_growth_value, 0, 1)
+        if date_growth is not None:
+            date_growth_value.setText(f"{date_growth:.2f}")
 
-        reserve_before = QLabel("Запас до")
-        reserve_before.setFixedHeight(20)
-        reserve_before.setFixedWidth(90)
-        main_info_block_layout.addWidget(reserve_before, 1, 0)
+        date_fell_label = QLabel("Дата рубки")
+        date_fell_label.setFixedHeight(20)
+        date_fell_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(date_fell_label, 0, 2)
 
-        reserve_after = QLabel("Запас после")
-        reserve_after.setFixedHeight(20)
-        reserve_after.setFixedWidth(90)
-        main_info_block_layout.addWidget(reserve_after, 1, 1)
+        date_fell_value = QLabel("Date")
+        date_fell_value.setFixedHeight(20)
+        date_fell_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(date_fell_value, 0, 3)
+        if date_fell is not None:
+            date_fell_value.setText(f"{date_fell:.2f}")
 
-        value_before = QLabel("Объём до")
-        value_before.setFixedHeight(20)
-        value_before.setFixedWidth(90)
-        main_info_block_layout.addWidget(value_before, 2, 0)
+        # Запас до рубки (Мд)
+        reserve_before_label = QLabel("Мд")
+        reserve_before_label.setFixedHeight(20)
+        reserve_before_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(reserve_before_label, 1, 0)
 
-        value_after = QLabel("Объём после")
-        value_after.setFixedHeight(20)
-        value_after.setFixedWidth(90)
-        main_info_block_layout.addWidget(value_after, 2, 1)
+        reserve_before_value = QLabel("float")
+        reserve_before_value.setFixedHeight(20)
+        reserve_before_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(reserve_before_value, 1, 1)
+        if reserve_before is not None:
+            reserve_before_value.setText(f"{reserve_before:.2f}")
 
-        intensity_by_reserve = QLabel("Интенсивность по запасу")
-        intensity_by_reserve.setFixedHeight(20)
-        intensity_by_reserve.setFixedWidth(90)
-        main_info_block_layout.addWidget(intensity_by_reserve, 3, 0)
+        # Запас после рубки (Мп)
+        reserve_after_label = QLabel("Мп")
+        reserve_after_label.setFixedHeight(20)
+        reserve_after_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(reserve_after_label, 1, 2)
 
-        intensity_by_volume = QLabel("Интенсивность по объёму")
-        intensity_by_volume.setFixedHeight(20)
-        intensity_by_volume.setFixedWidth(90)
-        main_info_block_layout.addWidget(intensity_by_volume, 3, 1)
+        reserve_after_value = QLabel("float")
+        reserve_after_value.setFixedHeight(20)
+        reserve_after_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(reserve_after_value, 1, 3)
+        if reserve_after is not None:
+            reserve_after_value.setText(f"{reserve_after:.2f}")
+
+        # Абсолютная полнота до рубки (Gад)
+        value_before_label = QLabel("Gад")
+        value_before_label.setFixedHeight(20)
+        value_before_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(value_before_label, 2, 0)
+
+        value_before_value = QLabel("float")
+        value_before_value.setFixedHeight(20)
+        value_before_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(value_before_value, 2, 1)
+        if reserve_before is not None:
+            value_before_value.setText(f"{reserve_before:.2f}")
+
+        # Абсолютная полнота после рубки (Gап)
+        value_after_label = QLabel("Gап")
+        value_after_label.setFixedHeight(20)
+        value_after_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(value_after_label, 2, 2)
+
+        value_after_value = QLabel("float")
+        value_after_value.setFixedHeight(20)
+        value_after_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(value_after_value, 2, 3)
+        if reserve_after is not None:
+            value_after_value.setText(f"{reserve_after:.2f}")
+
+        # Интенсивность по запасу, %
+        intensity_by_reserve_label = QLabel("Инт.зап, %")
+        intensity_by_reserve_label.setFixedHeight(20)
+        intensity_by_reserve_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(intensity_by_reserve_label, 3, 0)
+
+        intensity_by_reserve_value = QLabel("float")
+        intensity_by_reserve_value.setFixedHeight(20)
+        intensity_by_reserve_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(intensity_by_reserve_value, 3, 1)
+        if reserve_before and reserve_after:
+            intensity_by_reserve_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
+
+        # Интенсивность по полноте, %
+        intensity_by_volume_label = QLabel("Инт. об, %")
+        intensity_by_volume_label.setFixedHeight(20)
+        intensity_by_volume_label.setFixedWidth(90)
+        main_info_block_layout.addWidget(intensity_by_volume_label, 3, 2)
+
+        intensity_by_volume_value = QLabel("float")
+        intensity_by_volume_value.setFixedHeight(20)
+        intensity_by_volume_value.setFixedWidth(45)
+        main_info_block_layout.addWidget(intensity_by_volume_value, 3, 3)
+        if reserve_before and reserve_after:
+            intensity_by_volume_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
+
+        # Кнопки управления
+        btn_cancel = QPushButton()
+        btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
+        btn_cancel.setFixedWidth(25)
+        main_info_block_layout.addWidget(btn_cancel, 0, 4)
 
         main_info_block.setLayout(main_info_block_layout)
 
@@ -550,10 +612,6 @@ class MainWindow(QWidget):
         )
 
         print(self.list_record_planned_thinning)
-
-        # for key, item in self.graph.dict_line.items():
-
-        #         plot_widget.plot(x_args, y_predict, pen=pg.mkPen("r", width=2), name=f"Line {TypeLine.value}")
 
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")
@@ -730,6 +788,40 @@ class MainWindow(QWidget):
         self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
 
         self._update_graphic()
+
+        self.create_blocks_with_thinning_data()
+
+    def create_blocks_with_thinning_data(self) -> None:
+        """Create UI information blocks for thinning simulation data.
+
+        Clears existing blocks in the scroll area and generates new information blocks for
+        each thinning event in the simulation, displaying growth and felling dates, and
+        reserve values before and after thinning.
+
+        Returns:
+            None
+        """
+        scroll_area = self.form_scroll_area
+        blocks_widget = scroll_area.widget()
+        blocks_layout = blocks_widget.layout()
+
+        # Очищаем существующие блоки
+        while blocks_layout.count():
+            item = blocks_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        past_x = 0
+        # Создаем новые блоки с данными
+        for record in self.list_record_planned_thinning:
+            new_x, past_value, new_value = record.get("x"), record.get("past_value"), record.get("new_value")
+
+            info_block = self._create_info_block(
+                date_growth=past_x, date_fell=new_x, reserve_before=past_value, reserve_after=new_value
+            )
+            blocks_layout.addWidget(info_block)
+
+            past_x = new_x
 
 
 if __name__ == "__main__":
