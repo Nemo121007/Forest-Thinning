@@ -6,7 +6,7 @@ Uses PySide6 to create a graphical interface.
 
 import sys
 from PySide6.QtWidgets import QApplication
-from .View.main_screen import MainWindow
+from .View.MainWindow import MainWindow
 # from .View.list_graphics_window import ListGraphicsWindow
 
 if __name__ == "__main__":

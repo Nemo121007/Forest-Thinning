@@ -8,7 +8,7 @@ interacts with respective services for adding new elements to the system.
 from PySide6.QtWidgets import QMessageBox, QWidget
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtCore import Signal
-from ..background_information.Type_settings import TypeSettings
+from ..background_information.TypeSettings import TypeSettings
 from ..background_information.General_functions import validate_name, validate_float
 from .ElementForm import ElementForm
 from ..Services.AreasService import AreasService

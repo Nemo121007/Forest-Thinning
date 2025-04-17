@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from app.background_information.Paths import Paths
 
 from .Line import Line
-from ...background_information.Type_line import Type_line
+from ...background_information.TypeLine import Type_line
 
 
 class Graph:

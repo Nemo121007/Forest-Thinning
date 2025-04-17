@@ -359,5 +359,5 @@ class Graphics:
         for area_current, breed_current, condition_current in self._data.keys():
             if (area is None or area == area_current) and (breed is None or breed == breed_current):
                 if condition_current not in result:
-                    result.append(breed_current)
+                    result.append(condition_current)
         return result
