@@ -39,7 +39,7 @@ class Graph:
         x_min (float): Minimum x-value for the graph.
         y_max (float): Maximum y-value for the graph.
         y_min (float): Minimum y-value for the graph.
-        y_min_economic (float): Minimum x-value for the economic minimum line.
+        x_min_economic (float): Minimum x-value for the economic minimum line.
     """
 
     def __init__(self) -> None:
@@ -65,7 +65,7 @@ class Graph:
         self.x_min: float = None
         self.y_max: float = None
         self.y_min: float = None
-        self.y_min_economic: float = None
+        self.x_min_economic: float = None
         self.list_value_x: list[float] = None
 
         self.step: float = Settings.STEP_PLOTTING_GRAPH
@@ -119,7 +119,7 @@ class Graph:
         self.x_min: float = None
         self.y_max: float = None
         self.y_min: float = None
-        self.y_min_economic: float = None
+        self.x_min_economic: float = None
 
     def get_min_max_value(self) -> tuple[float, float, float, float]:
         """Retrieve the minimum and maximum x and y values for the graph.
@@ -175,9 +175,13 @@ class Graph:
         self.list_value_y_max_logging = self.predict_list_value(
             type_line=TypeLine.MAX_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
         )
+
         self.list_value_y_min_economic = self.predict_list_value(
             type_line=TypeLine.ECONOMIC_MIN_LINE, X=self.list_value_x, start_parameter=0
         )
+        for i in range(len(self.list_value_x)):
+            if self.list_value_x[i] < self.x_min_economic:
+                self.list_value_y_min_economic[i] = self.list_value_y_max_logging[i]
 
     def set_flag_save_forest(self, flag_save_forest: bool = False) -> None:
         """Set the protective forest mode flag for the graph.
@@ -375,8 +379,8 @@ class Graph:
             item.load_info(type_line=name_line)
             self.dict_line[name_line] = item
             if name_line == TypeLine.ECONOMIC_MIN_LINE:
-                if self.y_min_economic is None or self.y_min_economic > min(all_x):
-                    self.y_min_economic = min(all_x)
+                if self.x_min_economic is None or self.x_min_economic > min(all_x):
+                    self.x_min_economic = min(all_x)
         elif name_line == TypeLine.GROWTH_LINE or name_line == TypeLine.RECOVERY_LINE:
             if name_line in self.dict_line:
                 item = self.dict_line[name_line]
@@ -448,7 +452,7 @@ class Graph:
             "x_min": self.x_min,
             "y_max": self.y_max,
             "y_min": self.y_min,
-            "y_min_economic": self.y_min_economic,
+            "x_min_economic": self.x_min_economic,
         }
 
         dict_lines = {}
@@ -514,7 +518,7 @@ class Graph:
         self.x_min = float(info_graph["x_min"])
         self.y_max = float(info_graph["y_max"])
         self.y_min = float(info_graph["y_min"])
-        self.y_min_economic = float(info_graph["y_min_economic"])
+        self.x_min_economic = float(info_graph["x_min_economic"])
 
         dict_lines = dict(info_graph["dict_line"])
         for key, line in dict_lines.items():
@@ -601,7 +605,7 @@ class Graph:
 
         Args:
             type_line (TypeLine): The type of line to predict (e.g., growth, logging).
-            start_x (float, optional): Starting x-value. Defaults to x_min or y_min_economic for economic lines.
+            start_x (float, optional): Starting x-value. Defaults to x_min or x_min_economic for economic lines.
             end_x (float, optional): Ending x-value. Defaults to x_max.
             step (float, optional): Step size between x-values. Defaults to Settings.STEP_PLOTTING_GRAPH.
             start_parameter (float, optional): Starting parameter, must be 0 for non-growth/recovery lines.
@@ -623,7 +627,7 @@ class Graph:
             raise ValueError(f"Type line {type_line} not found")
 
         if type_line == TypeLine.ECONOMIC_MIN_LINE:
-            start_x = self.y_min_economic
+            start_x = self.x_min_economic
 
         if start_x is None:
             start_x = self.x_min
@@ -653,10 +657,11 @@ class Graph:
         Raises:
             ValueError: If required lines (bearing, logging, economic) or x-values are not initialized.
         """
+        list_value_x = [x for x in self.list_value_x if x <= self.age_thinning]
         if self.flag_save_forest:
-            list_value_x = [x for x in self.list_value_x if x <= self.age_thinning_save]
+            cutting_limit = self.age_thinning_save
         else:
-            list_value_x = [x for x in self.list_value_x if x <= self.age_thinning]
+            cutting_limit = self.age_thinning
         result_track_x: list[float] = []
         result_track_y: list[float] = []
         list_record_planned_thinning = []
@@ -680,20 +685,31 @@ class Graph:
 
             if (
                 current_value >= self.bearing_value_y_line[current_index]
+                and self.list_value_x[current_index] > self.x_min_economic
                 and current_value >= self.list_value_y_min_economic[current_index]
+                and list_value_x[current_index] <= cutting_limit
             ):
                 flag_thinning = True
                 start_parameter = list_value_x[current_index]
+                past_value = current_value
+                new_value = self.list_value_y_min_logging[current_index]
                 list_record_planned_thinning.append(
                     {
                         "x": list_value_x[current_index],
-                        "past_value": current_value,
-                        "new_value": self.list_value_y_min_logging[current_index],
+                        "past_value": past_value,
+                        "new_value": new_value,
                     }
                 )
-                current_value = self.list_value_y_min_logging[current_index]
-                result_track_x.append(list_value_x[current_index])
-                result_track_y.append(current_value)
+                current_value = new_value
+
+                # Для y координаты - создаем последовательность от начального до конечного значения
+                y_cut = np.arange(start=past_value, stop=new_value, step=-1 * Settings.STEP_VALUE_GRAPH)
+                # Для x координаты - повторяем текущий возраст нужное количество раз
+                x_cut = np.full_like(y_cut, list_value_x[current_index])
+
+                # Добавляем точки в общий график
+                result_track_x.extend(x_cut)
+                result_track_y.extend(y_cut)
         list_record_planned_thinning.append(
             {
                 "x": list_value_x[current_index],

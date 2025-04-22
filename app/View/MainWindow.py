@@ -21,7 +21,10 @@ from PySide6.QtWidgets import (
     QCheckBox,
 )
 from PySide6.QtGui import QColor, QPalette
+from PySide6 import QtGui
+from PySide6.QtCore import Qt
 import sys
+import numpy as np
 import pyqtgraph as pg
 
 from .ListGraphicsWindow import ListGraphicsWindow
@@ -115,6 +118,8 @@ class MainWindow(QWidget):
         self.list_value_track_thinning: list[float] = None
         self.list_record_planned_thinning: list[dict[str, float]] = None
 
+        self.predict_line_item = None  # Атрибут для хранения линии прогнозируемой рубки
+
         self.setWindowTitle("Прототип экрана")
         self.setGeometry(0, 0, 1024, 768)  # Окно
 
@@ -137,10 +142,6 @@ class MainWindow(QWidget):
         self.setLayout(layout)
 
         self.replace_graphic()
-
-        # self.set_list_parameter()
-
-        # self._update_graphic()
 
     def create_header(self) -> QWidget:
         """Create the header panel with action buttons.
@@ -507,11 +508,13 @@ class MainWindow(QWidget):
         return main_info_block
 
     def _update_graphic(self) -> None:
-        """Update the plot widget with prediction data.
+        """Update the plot widget with prediction data and handle double-click events on the predict line.
 
         Creates or updates a pyqtgraph PlotWidget to display minimum logging, maximum
         logging, and economic minimum lines, with a filled area between economic minimum
         and maximum logging lines. Sets axis labels and limits based on model data.
+        Adds double-click event handling for the predict line thinning with an increased
+        detection area using a buffer zone.
 
         Returns:
             None
@@ -519,20 +522,67 @@ class MainWindow(QWidget):
         if not hasattr(self, "graphic_layout"):
             self.graphic_layout = QVBoxLayout(self.graphic)
 
+        # Создаем PlotWidget
         plot_widget = pg.PlotWidget()
         plot_widget.setBackground("w")
+
+        # Буферная зона для детектирования клика (в единицах данных графика)
+        DETECTION_BUFFER = 1  # Расстояние в единицах полноты (можно настроить)
+
+        # Обработчик двойного клика
+        # Получаем данные линии
+        line_x = np.array(self.list_value_y_track_thinning.get("x"))
+        line_y = np.array(self.list_value_y_track_thinning.get("y"))
+
+        def mouseDoubleClickEvent(event: QtGui.QMouseEvent) -> None:
+            if event.button() == Qt.LeftButton:  # Проверяем левую кнопку мыши
+                pos = event.pos()  # Позиция клика в пикселях
+                scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)  # Преобразование в координаты графика
+                click_x, click_y = scene_pos.x(), scene_pos.y()
+
+                # Проверяем, попадает ли клик в буферную зону линии
+                if self.predict_line_item:
+                    # Находим ближайшую точку на линии
+                    distances = np.sqrt((line_x - click_x) ** 2 + (line_y - click_y) ** 2)
+                    min_distance = np.min(distances)
+
+                    # Проверяем, находится ли клик в пределах буфера
+                    if min_distance <= DETECTION_BUFFER:
+                        print(
+                            str(
+                                "Двойной клик на линии прогнозируемой рубки:"
+                                + f"Возраст={click_x:.2f}, Полнота={click_y:.2f}"
+                            )
+                        )
+                        event.accept()  # Подтверждаем обработку события
+                    else:
+                        event.ignore()  # Игнорируем, если клик вне буфера
+                else:
+                    event.ignore()  # Игнорируем, если линия не существует
+            else:
+                super(plot_widget.__class__, plot_widget).mouseDoubleClickEvent(event)
+
+        # Переопределяем метод mouseDoubleClickEvent для plot_widget
+        plot_widget.mouseDoubleClickEvent = mouseDoubleClickEvent
+
+        # Обработчик правого клика (оставляем из предыдущего решения)
+        def mousePressEvent(event: QtGui.QMouseEvent):
+            if event.button() == Qt.RightButton:
+                pos = event.pos()
+                scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)
+                x, y = scene_pos.x(), scene_pos.y()
+                print(f"Правый клик: Возраст={x:.2f}, Полнота={y:.2f}")
+                event.accept()
+            else:
+                super(plot_widget.__class__, plot_widget).mousePressEvent(event)
+
+        plot_widget.mousePressEvent = mousePressEvent
 
         # Устанавливаем фиксированные пределы осей
         increase_x = (self.x_max - self.x_min) * Settings.INCREASE_GRAPHIC
         increase_y = (self.y_max - self.y_min) * Settings.INCREASE_GRAPHIC
 
-        if self.flag_save_forest:
-            x_max = self.age_thinning_save
-        else:
-            x_max = self.age_thinning
-        x_min = self.x_min
-
-        plot_widget.setXRange(x_min - increase_x, x_max + increase_x, padding=0)
+        plot_widget.setXRange(self.x_min - increase_x, self.x_max + increase_x, padding=0)
         plot_widget.setYRange(self.y_min - increase_y, self.y_max + increase_y, padding=0)
 
         # Отключаем автоматическое масштабирование
@@ -541,9 +591,13 @@ class MainWindow(QWidget):
 
         # Ограничиваем возможность прокрутки
         plot_widget.setLimits(
-            xMin=x_min - increase_y, xMax=x_max + increase_x, yMin=self.y_min - increase_y, yMax=self.y_max + increase_y
+            xMin=self.x_min - increase_y,
+            xMax=self.x_max + increase_x,
+            yMin=self.y_min - increase_y,
+            yMax=self.y_max + increase_y,
         )
 
+        # Линии графика
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_logging,
@@ -556,6 +610,7 @@ class MainWindow(QWidget):
             pen=pg.mkPen((0, 0, 255, 255), width=2),
             name=f"Line {TypeLine.ECONOMIC_MAX_LINE.value}",
         )
+
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_economic,
@@ -563,6 +618,7 @@ class MainWindow(QWidget):
             name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
 
+        # Заливка между линиями
         polygon = pg.FillBetweenItem(
             curve1=pg.PlotDataItem(self.list_value_x, self.list_value_y_min_economic),
             curve2=pg.PlotDataItem(self.list_value_x, self.list_value_y_max_logging),
@@ -570,6 +626,7 @@ class MainWindow(QWidget):
         )
         plot_widget.addItem(polygon)
 
+        # Повторяем линию минимального уровня рубки (для видимости)
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_logging,
@@ -577,6 +634,7 @@ class MainWindow(QWidget):
             name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
         )
 
+        # Линия возраста рубки
         if self.flag_save_forest:
             target_value = self.age_thinning_save
         else:
@@ -594,29 +652,28 @@ class MainWindow(QWidget):
             name="Line thinning forest",
         )
 
-        end_index = next((i for i, x in enumerate(self.list_value_x) if x > target_value), len(self.list_value_x))
-        list_x = self.list_value_x[:end_index]
-        list_bearing_line = self.list_value_y_bearing_line[:end_index]
+        # Линия несущей способности
         plot_widget.plot(
-            list_x,
-            list_bearing_line,
+            self.list_value_x,
+            self.list_value_y_bearing_line,
             pen=pg.mkPen((0, 255, 0, 255), width=2),
             name="Bearing line",
         )
 
-        plot_widget.plot(
+        # Линия прогнозируемой рубки (сохраняем объект)
+        self.predict_line_item = plot_widget.plot(
             self.list_value_y_track_thinning.get("x"),
             self.list_value_y_track_thinning.get("y"),
             pen=pg.mkPen("r", width=2),
             name="Predict line thinning",
         )
 
-        print(self.list_record_planned_thinning)
-
+        # Легенда и подписи осей
         plot_widget.addLegend()
         plot_widget.setLabel("left", "Полнота")
         plot_widget.setLabel("bottom", "Возраст, лет")
 
+        # Заменяем старый график новым
         if self.graphic_layout.count() > 0:
             self.graphic_layout.itemAt(0).widget().setParent(None)
 
