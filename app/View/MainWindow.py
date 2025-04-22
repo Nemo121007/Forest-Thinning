@@ -645,7 +645,7 @@ class MainWindow(QWidget):
         ):
             raise ValueError("Both parameters must be provided or both must be None.")
 
-        self.changed_combo_boxes()
+        self.changed_combo_boxes(type_changed_parameter=type_changed_parameter, new_value_parameter=new_value_parameter)
 
         if self.name_area is None:
             return
@@ -668,6 +668,8 @@ class MainWindow(QWidget):
             self.list_value_y_max_logging,
             self.list_value_y_min_economic,
         ) = self.predict_model.get_base_lines_graph()
+
+        self.start_parameter = None
 
         self.replace_predict()
 

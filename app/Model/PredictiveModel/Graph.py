@@ -103,6 +103,7 @@ class Graph:
         Returns:
             None
         """
+        self.__init__()
         self.name: str = name
         self.dict_line: dict[TypeLine, Line] = {}
         self.area: str = area
