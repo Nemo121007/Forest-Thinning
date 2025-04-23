@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QCheckBox,
+    QMessageBox,
 )
 from PySide6.QtGui import QColor, QPalette
 from PySide6 import QtGui
@@ -108,7 +109,7 @@ class MainWindow(QWidget):
         self.x_max: float = None
         self.y_min: float = None
         self.y_max: float = None
-        self.start_parameter: float = None
+        self.start_point: tuple[float, float] = None
         self.list_value_x: list[float] = None
         self.list_value_y_min_logging: list[float] = None
         self.list_value_y_max_logging: list[float] = None
@@ -292,10 +293,7 @@ class MainWindow(QWidget):
         start_parameter_layout = QVBoxLayout(start_parameter_layout_widget)
         start_parameter_widget = QLabel("Возраст")
         start_parameter_edit_field = QLineEdit()
-        self.start_parameter_edit_field = start_parameter_edit_field
-        start_parameter_edit_field.textChanged.connect(
-            lambda: self.replace_predict(start_parameter=start_parameter_edit_field.text())
-        )
+        self.start_point_edit_field = start_parameter_edit_field
         start_parameter_layout.addWidget(start_parameter_widget)
         start_parameter_layout.addWidget(start_parameter_edit_field)
         current_settings.addWidget(start_parameter_layout_widget, 0, 0)
@@ -526,57 +524,19 @@ class MainWindow(QWidget):
         plot_widget = pg.PlotWidget()
         plot_widget.setBackground("w")
 
-        # Буферная зона для детектирования клика (в единицах данных графика)
-        DETECTION_BUFFER = 1  # Расстояние в единицах полноты (можно настроить)
-
         # Обработчик двойного клика
         # Получаем данные линии
-        line_x = np.array(self.list_value_y_track_thinning.get("x"))
-        line_y = np.array(self.list_value_y_track_thinning.get("y"))
+        if self.list_value_track_thinning:
+            line_x = np.array(self.list_value_track_thinning.get("x"))
+            line_y = np.array(self.list_value_track_thinning.get("y"))
 
-        def mouseDoubleClickEvent(event: QtGui.QMouseEvent) -> None:
-            if event.button() == Qt.LeftButton:  # Проверяем левую кнопку мыши
-                pos = event.pos()  # Позиция клика в пикселях
-                scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)  # Преобразование в координаты графика
-                click_x, click_y = scene_pos.x(), scene_pos.y()
+            # Переопределяем метод mouseDoubleClickEvent для plot_widget
+            plot_widget.mouseDoubleClickEvent = lambda event: self.mouseDoubleClickEvent(
+                plot_widget=plot_widget, line_x=line_x, line_y=line_y, event=event
+            )
 
-                # Проверяем, попадает ли клик в буферную зону линии
-                if self.predict_line_item:
-                    # Находим ближайшую точку на линии
-                    distances = np.sqrt((line_x - click_x) ** 2 + (line_y - click_y) ** 2)
-                    min_distance = np.min(distances)
-
-                    # Проверяем, находится ли клик в пределах буфера
-                    if min_distance <= DETECTION_BUFFER:
-                        print(
-                            str(
-                                "Двойной клик на линии прогнозируемой рубки:"
-                                + f"Возраст={click_x:.2f}, Полнота={click_y:.2f}"
-                            )
-                        )
-                        event.accept()  # Подтверждаем обработку события
-                    else:
-                        event.ignore()  # Игнорируем, если клик вне буфера
-                else:
-                    event.ignore()  # Игнорируем, если линия не существует
-            else:
-                super(plot_widget.__class__, plot_widget).mouseDoubleClickEvent(event)
-
-        # Переопределяем метод mouseDoubleClickEvent для plot_widget
-        plot_widget.mouseDoubleClickEvent = mouseDoubleClickEvent
-
-        # Обработчик правого клика (оставляем из предыдущего решения)
-        def mousePressEvent(event: QtGui.QMouseEvent):
-            if event.button() == Qt.RightButton:
-                pos = event.pos()
-                scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)
-                x, y = scene_pos.x(), scene_pos.y()
-                print(f"Правый клик: Возраст={x:.2f}, Полнота={y:.2f}")
-                event.accept()
-            else:
-                super(plot_widget.__class__, plot_widget).mousePressEvent(event)
-
-        plot_widget.mousePressEvent = mousePressEvent
+        # Обработчик ПКМ
+        plot_widget.mousePressEvent = lambda event: self._handle_right_click(plot_widget=plot_widget, event=event)
 
         # Устанавливаем фиксированные пределы осей
         increase_x = (self.x_max - self.x_min) * Settings.INCREASE_GRAPHIC
@@ -645,28 +605,34 @@ class MainWindow(QWidget):
             pen=pg.mkPen((0, 0, 0, 255), width=2),
             name="Line thinning forest",
         )
-        plot_widget.plot(
-            [self.x_min, self.x_min],
-            [self.y_min, self.y_max],
-            pen=pg.mkPen((0, 0, 0, 255), width=2),
-            name="Line thinning forest",
-        )
+
+        if self.start_point:
+            scatter = pg.ScatterPlotItem(
+                pos=[(self.start_point[0], self.start_point[1])],
+                size=10,
+                pen=pg.mkPen(None),
+                brush=pg.mkBrush(0, 255, 0),
+                symbol="o",
+            )
+            plot_widget.addItem(scatter)
 
         # Линия несущей способности
-        plot_widget.plot(
-            self.list_value_x,
-            self.list_value_y_bearing_line,
-            pen=pg.mkPen((0, 255, 0, 255), width=2),
-            name="Bearing line",
-        )
+        if self.list_value_y_bearing_line:
+            plot_widget.plot(
+                self.list_value_x,
+                self.list_value_y_bearing_line,
+                pen=pg.mkPen((0, 255, 0, 255), width=2),
+                name="Bearing line",
+            )
 
         # Линия прогнозируемой рубки (сохраняем объект)
-        self.predict_line_item = plot_widget.plot(
-            self.list_value_y_track_thinning.get("x"),
-            self.list_value_y_track_thinning.get("y"),
-            pen=pg.mkPen("r", width=2),
-            name="Predict line thinning",
-        )
+        if self.predict_line_item:
+            self.predict_line_item = plot_widget.plot(
+                self.list_value_y_track_thinning.get("x"),
+                self.list_value_y_track_thinning.get("y"),
+                pen=pg.mkPen("r", width=2),
+                name="Predict line thinning",
+            )
 
         # Легенда и подписи осей
         plot_widget.addLegend()
@@ -678,6 +644,71 @@ class MainWindow(QWidget):
             self.graphic_layout.itemAt(0).widget().setParent(None)
 
         self.graphic_layout.addWidget(plot_widget)
+
+    def _handle_right_click(self, plot_widget: pg.PlotWidget, event: QtGui.QMouseEvent) -> None:
+        if event.button() == Qt.RightButton:
+            pos = event.pos()
+            scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)
+            x, y = scene_pos.x(), scene_pos.y()
+
+            # Округляем x до ближайшего кратного STEP_PLOTTING_GRAPH
+            x = round(x / Settings.STEP_PLOTTING_GRAPH) * Settings.STEP_PLOTTING_GRAPH
+            y = round(y / Settings.STEP_VALUE_GRAPH) * Settings.STEP_VALUE_GRAPH
+
+            min_y = self.predict_model.get_predict_value(type_line=TypeLine.MIN_LEVEL_LOGGING, x=x)
+            max_y = self.predict_model.get_predict_value(type_line=TypeLine.MAX_LEVEL_LOGGING, x=x)
+            if y < min_y and y > max_y:
+                return
+
+            reply = QMessageBox.question(
+                self,
+                "Подтверждение действия",
+                f"Добавить опорную точку?\nВозраст={x:.2f}, Полнота={y:.2f}",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if reply == QMessageBox.Yes:
+                self.predict_model.set_bearing_parameter(bearing_point=(x, y))
+                self.predict_model.initialize_bearing_line()
+                self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
+            self.start_point = (x, y)
+
+            self._update_graphic()
+            event.accept()
+        else:
+            super(plot_widget.__class__, plot_widget).mousePressEvent(event)
+
+    def mouseDoubleClickEvent(
+        self, plot_widget: pg.PlotWidget, line_x: np.array, line_y: np.array, event: QtGui.QMouseEvent
+    ) -> None:
+        """Fixing."""
+        if event.button() == Qt.LeftButton:  # Проверяем левую кнопку мыши
+            pos = event.pos()  # Позиция клика в пикселях
+            scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)  # Преобразование в координаты графика
+            click_x, click_y = scene_pos.x(), scene_pos.y()
+
+            # Проверяем, попадает ли клик в буферную зону линии
+            if self.predict_line_item:
+                # Находим ближайшую точку на линии
+                distances = np.sqrt((line_x - click_x) ** 2 + (line_y - click_y) ** 2)
+                min_distance = np.min(distances)
+
+                # Проверяем, находится ли клик в пределах буфера
+                if min_distance <= Settings.DETENTION_BUFFER:
+                    print(
+                        str(
+                            "Двойной клик на линии прогнозируемой рубки:"
+                            + f"Возраст={click_x:.2f}, Полнота={click_y:.2f}"
+                        )
+                    )
+                    event.accept()  # Подтверждаем обработку события
+                else:
+                    event.ignore()  # Игнорируем, если клик вне буфера
+            else:
+                event.ignore()  # Игнорируем, если линия не существует
+        else:
+            super(plot_widget.__class__, plot_widget).mouseDoubleClickEvent(event)
 
     def replace_graphic(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
         """Replace the current graphic with updated area, breed, or condition.
@@ -726,9 +757,9 @@ class MainWindow(QWidget):
         self.list_value_y_max_logging = base_lines.get("list_value_y_max_logging")
         self.list_value_y_min_economic = base_lines.get("list_value_y_min_economic")
 
-        self.start_parameter = None
+        self.start_point = None
 
-        self.replace_predict()
+        self._update_graphic()
 
     def changed_combo_boxes(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
         """Update combo box selections based on a changed parameter.
@@ -822,30 +853,9 @@ class MainWindow(QWidget):
         Raises:
             ValueError: If start_parameter cannot be converted to a float when provided.
         """
-        if self.start_parameter is None and start_parameter is None:
-            self.start_parameter = int(self.predict_model.get_bearing_parameter())
-
-            self.start_parameter_edit_field.blockSignals(True)
-            self.start_parameter_edit_field.setText(str(self.start_parameter))
-            self.start_parameter_edit_field.blockSignals(False)
-        if start_parameter is not None and start_parameter.replace(",", "").replace(".", "").isdigit():
-            start_parameter = start_parameter.replace(",", ".")
-            start_parameter = float(start_parameter)
-            if (
-                start_parameter > self.list_value_y_min_logging[0]
-                and start_parameter < self.list_value_y_max_logging[0]
-            ):
-                self.start_parameter = start_parameter
-
-        self.predict_model.set_bearing_parameter(bearing_parameter=self.start_parameter)
-        self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
-
-        if flag_safe_forest is not None and flag_safe_forest != self.flag_save_forest:
-            self.flag_save_forest = flag_safe_forest
-            self.predict_model.set_flag_save_forest(flag_save_forest=self.flag_save_forest)
-
-        self.list_value_y_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
-
+        self.flag_save_forest = flag_safe_forest
+        if self.list_value_y_bearing_line:
+            self.list_value_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
         self._update_graphic()
 
         self.create_blocks_with_thinning_data()
@@ -872,15 +882,16 @@ class MainWindow(QWidget):
 
         past_x = 0
         # Создаем новые блоки с данными
-        for record in self.list_record_planned_thinning:
-            new_x, past_value, new_value = record.get("x"), record.get("past_value"), record.get("new_value")
+        if self.list_record_planned_thinning:
+            for record in self.list_record_planned_thinning:
+                new_x, past_value, new_value = record.get("x"), record.get("past_value"), record.get("new_value")
 
-            info_block = self._create_info_block(
-                date_growth=past_x, date_fell=new_x, reserve_before=past_value, reserve_after=new_value
-            )
-            blocks_layout.addWidget(info_block)
+                info_block = self._create_info_block(
+                    date_growth=past_x, date_fell=new_x, reserve_before=past_value, reserve_after=new_value
+                )
+                blocks_layout.addWidget(info_block)
 
-            past_x = new_x
+                past_x = new_x
 
 
 if __name__ == "__main__":

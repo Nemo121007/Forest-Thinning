@@ -229,13 +229,14 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get base lines graph: {str(e)}")
 
-    def set_bearing_parameter(self, bearing_parameter: float = None) -> None:
+    def set_bearing_parameter(self, bearing_point: tuple[float, float] = None, bearing_parameter: float = None) -> None:
         """Set the bearing parameter for the growth line prediction.
 
         Assigns the bearing parameter either as the provided value or computes it based
         on the model’s logging lines if none is provided.
 
         Args:
+            bearing_point: tuple[float, float]
             bearing_parameter (float, optional): The bearing parameter value. Defaults to None.
 
         Returns:
@@ -244,8 +245,10 @@ class PredictModelService:
         Raises:
             Exception: If an error occurs while setting the bearing parameter.
         """
+        if bearing_point is not None and bearing_parameter is not None:
+            raise Exception("")
         try:
-            self.predict_model.set_bearing_parameter(bearing_parameter=bearing_parameter)
+            self.predict_model.set_bearing_parameter(bearing_point=bearing_point, bearing_parameter=bearing_parameter)
         except Exception as e:
             raise Exception(f"Error set bearing parameter: {str(e)}")
 

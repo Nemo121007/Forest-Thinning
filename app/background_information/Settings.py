@@ -26,3 +26,5 @@ class Settings:
     STEP_VALUE_GRAPH: float = 0.1
 
     INCREASE_GRAPHIC: float = 0.01
+
+    DETENTION_BUFFER: float = 1

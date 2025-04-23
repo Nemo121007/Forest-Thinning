@@ -220,13 +220,14 @@ class Graph:
             "list_value_y_min_economic": self.list_value_y_min_economic,
         }
 
-    def set_bearing_parameter(self, bearing_parameter: float = None) -> None:
+    def set_bearing_parameter(self, bearing_point: tuple[float, float] = None, bearing_parameter: float = None) -> None:
         """Set the bearing parameter for the growth line.
 
         Assigns the bearing parameter either as the provided value or as the average of
         the minimum and maximum logging lines’ initial y-values if none is provided.
 
         Args:
+            bearing_point: tuple[float, float]
             bearing_parameter (float, optional): The bearing parameter value. Defaults to None.
 
         Returns:
@@ -235,10 +236,25 @@ class Graph:
         Raises:
             ValueError: If the logging lines’ y-values are not initialized.
         """
-        if bearing_parameter is None:
-            self.bearing_value_parameter = (self.list_value_y_min_logging[0] + self.list_value_y_max_logging[0]) / 2
-        else:
+        if bearing_point is not None:
+            start_x = bearing_point[0]
+            start_y = bearing_point[1]
+            min_y = self.list_value_y_min_logging[0]
+            max_y = self.list_value_y_max_logging[0]
+
+            min_deferent = max_y
+            for j in np.arange(start=min_y, stop=max_y, step=Settings.STEP_VALUE_GRAPH):
+                predict_y = self.predict_value(type_line=TypeLine.GROWTH_LINE, X=start_x, start_parameter=j)
+                different = abs(predict_y - start_y)
+                if different <= min_deferent:
+                    min_deferent = different
+                else:
+                    self.bearing_value_parameter = j
+                    return
+        elif bearing_parameter is not None:
             self.bearing_value_parameter = bearing_parameter
+        else:
+            self.bearing_value_parameter = (self.list_value_y_min_logging[0] + self.list_value_y_max_logging[0]) / 2
 
     def get_bearing_parameter(self) -> float:
         """Retrieve the current bearing parameter for the growth line.
