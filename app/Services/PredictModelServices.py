@@ -207,7 +207,7 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error initialize base line graph: {str(e)}")
 
-    def get_base_lines_graph(self) -> tuple[list[float], list[float], list[float], list[float]]:
+    def get_base_lines_graph(self) -> dict[str, list[float]]:
         """Retrieve x-values and y-values for base lines (logging and economic minimum).
 
         Returns the x-values and predicted y-values for minimum logging, maximum logging,

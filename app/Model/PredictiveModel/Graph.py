@@ -197,7 +197,7 @@ class Graph:
         """
         self.flag_save_forest = flag_save_forest
 
-    def get_base_lines_graph(self) -> tuple[list[float], list[float], list[float], list[float]]:
+    def get_base_lines_graph(self) -> dict[str, list[float]]:
         """Retrieve the x-values and y-values for base lines (logging and economic minimum).
 
         Returns the x-values and predicted y-values for minimum logging, maximum logging,
@@ -213,12 +213,12 @@ class Graph:
         Raises:
             ValueError: If the base lines have not been initialized.
         """
-        return (
-            self.list_value_x,
-            self.list_value_y_min_logging,
-            self.list_value_y_max_logging,
-            self.list_value_y_min_economic,
-        )
+        return {
+            "list_value_x": self.list_value_x,
+            "list_value_y_min_logging": self.list_value_y_min_logging,
+            "list_value_y_max_logging": self.list_value_y_max_logging,
+            "list_value_y_min_economic": self.list_value_y_min_economic,
+        }
 
     def set_bearing_parameter(self, bearing_parameter: float = None) -> None:
         """Set the bearing parameter for the growth line.

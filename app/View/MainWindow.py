@@ -719,12 +719,12 @@ class MainWindow(QWidget):
         self.predict_model.load_model()
         self.x_min, self.x_max, self.y_min, self.y_max = self.predict_model.get_min_max_value()
         self.predict_model.initialize_base_line_graph(x_start=self.x_min, x_end=self.x_max)
-        (
-            self.list_value_x,
-            self.list_value_y_min_logging,
-            self.list_value_y_max_logging,
-            self.list_value_y_min_economic,
-        ) = self.predict_model.get_base_lines_graph()
+
+        base_lines = self.predict_model.get_base_lines_graph()
+        self.list_value_x = base_lines.get("list_value_x")
+        self.list_value_y_min_logging = base_lines.get("list_value_y_min_logging")
+        self.list_value_y_max_logging = base_lines.get("list_value_y_max_logging")
+        self.list_value_y_min_economic = base_lines.get("list_value_y_min_economic")
 
         self.start_parameter = None
 
