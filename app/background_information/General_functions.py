@@ -46,3 +46,18 @@ def validate_float(test_line: str) -> float | None:
         return float(test_line)
     except ValueError:
         return None
+
+
+def fix_monotony(array: list[float]) -> list[float]:
+    """Fixes monotony in a numeric array by ensuring each element is not less than the previous one.
+
+    Args:
+        array (list[float]): Input array of floating-point numbers.
+
+    Returns:
+        list[float]: Modified array where each element is greater than or equal to the previous one.
+    """
+    for i in range(1, len(array)):
+        if array[i] < array[i - 1]:
+            array[i] = array[i - 1]
+    return array

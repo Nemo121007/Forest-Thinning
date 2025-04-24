@@ -275,6 +275,7 @@ class MainWindow(QWidget):
         save_forest = QLabel("Защитный лес")
         save_check_box = QCheckBox()
         save_check_box.setChecked(self.flag_save_forest)
+        self.save_check_box = save_check_box
         save_check_box.stateChanged.connect(lambda: self.replace_predict(flag_safe_forest=save_check_box.isChecked()))
         save_widget.addWidget(save_forest)
         save_widget.addWidget(save_check_box)
@@ -626,10 +627,10 @@ class MainWindow(QWidget):
             )
 
         # Линия прогнозируемой рубки (сохраняем объект)
-        if self.predict_line_item:
+        if self.list_value_track_thinning:
             self.predict_line_item = plot_widget.plot(
-                self.list_value_y_track_thinning.get("x"),
-                self.list_value_y_track_thinning.get("y"),
+                self.list_value_track_thinning.get("x"),
+                self.list_value_track_thinning.get("y"),
                 pen=pg.mkPen("r", width=2),
                 name="Predict line thinning",
             )
@@ -674,7 +675,7 @@ class MainWindow(QWidget):
                 self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
             self.start_point = (x, y)
 
-            self._update_graphic()
+            self.replace_predict()
             event.accept()
         else:
             super(plot_widget.__class__, plot_widget).mousePressEvent(event)
@@ -735,6 +736,22 @@ class MainWindow(QWidget):
 
         self.changed_combo_boxes(type_changed_parameter=type_changed_parameter, new_value_parameter=new_value_parameter)
 
+        self.flag_save_forest: bool = False
+        self.save_check_box.setChecked(self.flag_save_forest)
+        self.x_min: float = None
+        self.x_max: float = None
+        self.y_min: float = None
+        self.y_max: float = None
+        self.start_point: tuple[float, float] = None
+        self.list_value_x: list[float] = None
+        self.list_value_y_min_logging: list[float] = None
+        self.list_value_y_max_logging: list[float] = None
+        self.list_value_y_min_economic: list[float] = None
+        self.list_value_y_bearing_line: list[float] = None
+        self.list_value_track_thinning: list[float] = None
+        self.list_record_planned_thinning: list[dict[str, float]] = None
+        self.predict_line_item = None
+
         if self.name_area is None:
             return
 
@@ -756,8 +773,6 @@ class MainWindow(QWidget):
         self.list_value_y_min_logging = base_lines.get("list_value_y_min_logging")
         self.list_value_y_max_logging = base_lines.get("list_value_y_max_logging")
         self.list_value_y_min_economic = base_lines.get("list_value_y_min_economic")
-
-        self.start_point = None
 
         self._update_graphic()
 
@@ -836,7 +851,7 @@ class MainWindow(QWidget):
         self.form_combo_breed.blockSignals(False)
         self.form_combo_condition.blockSignals(False)
 
-    def replace_predict(self, start_parameter: str = None, flag_safe_forest: bool = False) -> None:
+    def replace_predict(self, start_parameter: str = None, flag_safe_forest: bool = None) -> None:
         """Update prediction data with new bearing parameter or forest mode.
 
         Updates the bearing parameter and protective forest flag, initializes the bearing
@@ -853,7 +868,9 @@ class MainWindow(QWidget):
         Raises:
             ValueError: If start_parameter cannot be converted to a float when provided.
         """
-        self.flag_save_forest = flag_safe_forest
+        if flag_safe_forest is not None:
+            self.flag_save_forest = flag_safe_forest
+            self.predict_model.set_flag_save_forest(flag_save_forest=flag_safe_forest)
         if self.list_value_y_bearing_line:
             self.list_value_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
         self._update_graphic()

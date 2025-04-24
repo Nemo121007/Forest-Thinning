@@ -14,6 +14,7 @@ from ...background_information.Paths import Paths
 from .Line import Line
 from ...background_information.TypeLine import TypeLine
 from ...background_information.Settings import Settings
+from ...background_information.General_functions import fix_monotony
 
 
 class Graph:
@@ -169,16 +170,21 @@ class Graph:
             step = self.step
 
         self.list_value_x = np.arange(self.x_min, self.x_max + step, step).tolist()
+
         self.list_value_y_min_logging = self.predict_list_value(
             type_line=TypeLine.MIN_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
         )
+        self.list_value_y_min_logging = fix_monotony(array=self.list_value_y_min_logging)
+
         self.list_value_y_max_logging = self.predict_list_value(
             type_line=TypeLine.MAX_LEVEL_LOGGING, X=self.list_value_x, start_parameter=0
         )
+        self.list_value_y_max_logging = fix_monotony(array=self.list_value_y_max_logging)
 
         self.list_value_y_min_economic = self.predict_list_value(
             type_line=TypeLine.ECONOMIC_MIN_LINE, X=self.list_value_x, start_parameter=0
         )
+        self.list_value_y_min_economic = fix_monotony(array=self.list_value_y_min_economic)
         for i in range(len(self.list_value_x)):
             if self.list_value_x[i] < self.x_min_economic:
                 self.list_value_y_min_economic[i] = self.list_value_y_max_logging[i]
@@ -290,6 +296,7 @@ class Graph:
         self.bearing_value_y_line = self.predict_list_value(
             type_line=TypeLine.GROWTH_LINE, X=self.list_value_x, start_parameter=self.bearing_value_parameter
         )
+        self.bearing_value_y_line = fix_monotony(array=self.bearing_value_y_line)
 
     def get_bearing_line(self) -> list[float]:
         """Retrieve the y-values of the bearing line.
