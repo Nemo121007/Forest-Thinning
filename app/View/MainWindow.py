@@ -37,6 +37,7 @@ from ..Services.PredictModelServices import PredictModelService
 from ..background_information.TypeLine import TypeLine
 from ..background_information.TypeSettings import TypeSettings
 from ..background_information.Settings import Settings
+from ..background_information.General_functions import cast_coordinates_point
 
 
 class MainWindow(QWidget):
@@ -385,6 +386,21 @@ class MainWindow(QWidget):
         reserve_before: float = None,
         reserve_after: float = None,
     ) -> QWidget:
+        """Create an information block for thinning data.
+
+        Constructs a QWidget displaying thinning event details, including growth and felling
+        dates, reserve values before and after thinning, and intensity metrics. Includes a
+        cancel button to delete the thinning event.
+
+        Args:
+            date_growth (float, optional): The growth date (x-value). Defaults to None.
+            date_fell (float, optional): The felling date (x-value). Defaults to None.
+            reserve_before (float, optional): The reserve value before thinning. Defaults to None.
+            reserve_after (float, optional): The reserve value after thinning. Defaults to None.
+
+        Returns:
+            QWidget: The information block widget with labels and a cancel button.
+        """
         main_info_block = QWidget()
         main_info_block.setStyleSheet("background-color: #DAE8FC;")
         main_info_block.setContentsMargins(5, 0, 5, 0)
@@ -500,6 +516,7 @@ class MainWindow(QWidget):
         btn_cancel = QPushButton()
         btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
         btn_cancel.setFixedWidth(25)
+        btn_cancel.clicked.connect(lambda: self.predict_model.delete_thinning(date_thinning=date_fell))
         main_info_block_layout.addWidget(btn_cancel, 0, 4)
 
         main_info_block.setLayout(main_info_block_layout)
@@ -513,7 +530,7 @@ class MainWindow(QWidget):
         logging, and economic minimum lines, with a filled area between economic minimum
         and maximum logging lines. Sets axis labels and limits based on model data.
         Adds double-click event handling for the predict line thinning with an increased
-        detection area using a buffer zone.
+        detection area using a buffer zone. Updates UI blocks with thinning data.
 
         Returns:
             None
@@ -565,6 +582,7 @@ class MainWindow(QWidget):
             pen=pg.mkPen((0, 0, 255, 255), width=2),
             name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
         )
+
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_max_logging,
@@ -578,6 +596,14 @@ class MainWindow(QWidget):
             pen=pg.mkPen((255, 0, 255, 255), width=2),
             name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
+        # scatter_before = pg.ScatterPlotItem(
+        #     pos=list(zip(self.list_value_x, self.list_value_y_min_economic)),
+        #     size=10,
+        #     pen=pg.mkPen(None),
+        #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+        #     symbol='o'
+        # )
+        # plot_widget.addItem(scatter_before)
 
         # Заливка между линиями
         polygon = pg.FillBetweenItem(
@@ -625,6 +651,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen((0, 255, 0, 255), width=2),
                 name="Bearing line",
             )
+            # scatter_before = pg.ScatterPlotItem(
+            #     pos=list(zip(self.list_value_x, self.list_value_y_bearing_line)),
+            #     size=10,
+            #     pen=pg.mkPen(None),
+            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+            #     symbol='o'
+            # )
+            # plot_widget.addItem(scatter_before)
 
         # Линия прогнозируемой рубки (сохраняем объект)
         if self.list_value_track_thinning:
@@ -634,6 +668,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen("r", width=2),
                 name="Predict line thinning",
             )
+            # scatter_before = pg.ScatterPlotItem(
+            #     pos=list(zip(self.list_value_track_thinning.get("x"), self.list_value_track_thinning.get("y"))),
+            #     size=10,
+            #     pen=pg.mkPen(None),
+            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+            #     symbol='o'
+            # )
+            # plot_widget.addItem(scatter_before)
 
         # Легенда и подписи осей
         plot_widget.addLegend()
@@ -646,15 +688,29 @@ class MainWindow(QWidget):
 
         self.graphic_layout.addWidget(plot_widget)
 
+        self.create_blocks_with_thinning_data()
+
     def _handle_right_click(self, plot_widget: pg.PlotWidget, event: QtGui.QMouseEvent) -> None:
+        """Handle right-click events on the plot to add a bearing point.
+
+        Processes right-click events to add a bearing point at the clicked position after
+        user confirmation, updates the bearing line, and refreshes the plot. Ignores clicks
+        outside the valid y-range defined by minimum and maximum logging lines.
+
+        Args:
+            plot_widget (pg.PlotWidget): The plot widget where the event occurred.
+            event (QtGui.QMouseEvent): The mouse event object.
+
+        Returns:
+            None
+        """
         if event.button() == Qt.RightButton:
             pos = event.pos()
             scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)
             x, y = scene_pos.x(), scene_pos.y()
 
             # Округляем x до ближайшего кратного STEP_PLOTTING_GRAPH
-            x = round(x / Settings.STEP_PLOTTING_GRAPH) * Settings.STEP_PLOTTING_GRAPH
-            y = round(y / Settings.STEP_VALUE_GRAPH) * Settings.STEP_VALUE_GRAPH
+            x, y = cast_coordinates_point(x=x, y=y)
 
             min_y = self.predict_model.get_predict_value(type_line=TypeLine.MIN_LEVEL_LOGGING, x=x)
             max_y = self.predict_model.get_predict_value(type_line=TypeLine.MAX_LEVEL_LOGGING, x=x)
@@ -664,7 +720,7 @@ class MainWindow(QWidget):
             reply = QMessageBox.question(
                 self,
                 "Подтверждение действия",
-                f"Добавить опорную точку?\nВозраст={x:.2f}, Полнота={y:.2f}",
+                f"Добавить опорную точку?\nВозраст={x:.0f}, Полнота={y:.1f}",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -675,7 +731,7 @@ class MainWindow(QWidget):
                 self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
             self.start_point = (x, y)
 
-            self.replace_predict()
+            self._update_graphic()
             event.accept()
         else:
             super(plot_widget.__class__, plot_widget).mousePressEvent(event)
@@ -683,7 +739,21 @@ class MainWindow(QWidget):
     def mouseDoubleClickEvent(
         self, plot_widget: pg.PlotWidget, line_x: np.array, line_y: np.array, event: QtGui.QMouseEvent
     ) -> None:
-        """Fixing."""
+        """Handle double-click events on the predict line to add or correct thinning events.
+
+        Processes double-click events on the thinning prediction line to add a new thinning
+        event or correct an existing one if the click is within the detection buffer. Updates
+        the thinning data and refreshes the plot.
+
+        Args:
+            plot_widget (pg.PlotWidget): The plot widget where the event occurred.
+            line_x (np.array): The x-coordinates of the thinning prediction line.
+            line_y (np.array): The y-coordinates of the thinning prediction line.
+            event (QtGui.QMouseEvent): The mouse event object.
+
+        Returns:
+            None
+        """
         if event.button() == Qt.LeftButton:  # Проверяем левую кнопку мыши
             pos = event.pos()  # Позиция клика в пикселях
             scene_pos = plot_widget.plotItem.vb.mapSceneToView(pos)  # Преобразование в координаты графика
@@ -697,12 +767,20 @@ class MainWindow(QWidget):
 
                 # Проверяем, находится ли клик в пределах буфера
                 if min_distance <= Settings.DETENTION_BUFFER:
-                    print(
-                        str(
-                            "Двойной клик на линии прогнозируемой рубки:"
-                            + f"Возраст={click_x:.2f}, Полнота={click_y:.2f}"
-                        )
-                    )
+                    x, y = cast_coordinates_point(x=click_x, y=click_y)
+                    print(str("Двойной клик на линии прогнозируемой рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
+                    list_date_thinning = []
+                    for item in self.list_record_planned_thinning:
+                        list_date_thinning.append(item.get("x"))
+                    if x in list_date_thinning:
+                        self.predict_model.correct_thinning(date_thinning=x, value_thinning=y)
+                        self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
+                        self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+                    else:
+                        self.predict_model.add_thinning(date_thinning=x)
+                        self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
+                        self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+                    self._update_graphic()
                     event.accept()  # Подтверждаем обработку события
                 else:
                     event.ignore()  # Игнорируем, если клик вне буфера
@@ -720,14 +798,14 @@ class MainWindow(QWidget):
 
         Args:
             type_changed_parameter (TypeSettings, optional): The type of parameter changed (AREA, BREED, CONDITION).
-            Defaults to None.
+                Defaults to None.
             new_value_parameter (str, optional): The new value for the changed parameter. Defaults to None.
 
         Returns:
             None
 
         Raises:
-            ValueError: If one of type_changed_parameter or new_value_parameter is provided without the other.
+            ValueError: If only one of type_changed_parameter or new_value_parameter is provided.
         """
         if (type_changed_parameter is not None and new_value_parameter is None) or (
             type_changed_parameter is None and new_value_parameter is not None
@@ -851,28 +929,33 @@ class MainWindow(QWidget):
         self.form_combo_breed.blockSignals(False)
         self.form_combo_condition.blockSignals(False)
 
-    def replace_predict(self, start_parameter: str = None, flag_safe_forest: bool = None) -> None:
+    def replace_predict(self, start_parameter: str = None, flag_save_forest: bool = None) -> None:
         """Update prediction data with new bearing parameter or forest mode.
 
-        Updates the bearing parameter and protective forest flag, initializes the bearing
-        line, runs a thinning simulation, and refreshes the plot. Sets the initial bearing
-        parameter from the model if not provided.
+        Updates the bearing parameter (if provided) and protective forest flag, initializes
+        the bearing line, runs a thinning simulation, and refreshes the plot. If start_parameter
+        is not provided, uses the existing bearing parameter from the model.
 
         Args:
-            start_parameter (str, optional): The new bearing parameter value (converted to float). Defaults to None.
-            flag_safe_forest (bool, optional): Indicates protective forest mode. Defaults to False.
+            start_parameter (str, optional): The new bearing parameter value (converted to float).
+                If None, uses the model's current bearing parameter. Defaults to None.
+            flag_save_forest (bool, optional): Indicates protective forest mode. If None, retains
+                the current mode. Defaults to None.
 
         Returns:
             None
 
         Raises:
-            ValueError: If start_parameter cannot be converted to a float when provided.
+            ValueError: If start_parameter is provided but cannot be converted to a float.
         """
-        if flag_safe_forest is not None:
-            self.flag_save_forest = flag_safe_forest
-            self.predict_model.set_flag_save_forest(flag_save_forest=flag_safe_forest)
+        if flag_save_forest is not None:
+            self.flag_save_forest = flag_save_forest
+            self.predict_model.set_flag_save_forest(flag_save_forest=flag_save_forest)
         if self.list_value_y_bearing_line:
-            self.list_value_track_thinning, self.list_record_planned_thinning = self.predict_model.simulation_thinning()
+            self.predict_model.simulation_thinning()
+            self.predict_model.initialize_track_thinning()
+            self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+            self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
         self._update_graphic()
 
         self.create_blocks_with_thinning_data()
