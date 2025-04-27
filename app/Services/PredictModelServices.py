@@ -207,18 +207,18 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error initialize base line graph: {str(e)}")
 
-    def get_base_lines_graph(self) -> tuple[list[float], list[float], list[float], list[float]]:
+    def get_base_lines_graph(self) -> dict[str, list[float]]:
         """Retrieve x-values and y-values for base lines (logging and economic minimum).
 
-        Returns the x-values and predicted y-values for minimum logging, maximum logging,
-        and economic minimum lines for plotting.
+        Returns a dictionary containing x-values and predicted y-values for minimum logging,
+        maximum logging, and economic minimum lines for plotting.
 
         Returns:
-            tuple[list[float], list[float], list[float], list[float]]: A tuple containing:
-                - List of x-values.
-                - List of y-values for minimum logging line.
-                - List of y-values for maximum logging line.
-                - List of y-values for economic minimum line.
+            dict[str, list[float]]: A dictionary with keys:
+                - 'list_value_x': List of x-values.
+                - 'list_value_y_min_logging': List of y-values for minimum logging line.
+                - 'list_value_y_max_logging': List of y-values for maximum logging line.
+                - 'list_value_y_min_economic': List of y-values for economic minimum line.
 
         Raises:
             Exception: If the base lines have not been initialized or an error occurs.
@@ -229,23 +229,31 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get base lines graph: {str(e)}")
 
-    def set_bearing_parameter(self, bearing_parameter: float = None) -> None:
+    def set_bearing_parameter(self, bearing_point: tuple[float, float] = None, bearing_parameter: float = None) -> None:
         """Set the bearing parameter for the growth line prediction.
 
-        Assigns the bearing parameter either as the provided value or computes it based
-        on the model’s logging lines if none is provided.
+        Assigns the bearing parameter either as the provided value, from a bearing point by
+        minimizing the difference between predicted and actual y-values, or as the average
+        of the minimum and maximum logging lines’ initial y-values if neither is provided.
+        Only one of bearing_point or bearing_parameter should be specified.
 
         Args:
-            bearing_parameter (float, optional): The bearing parameter value. Defaults to None.
+            bearing_point (tuple[float, float], optional): A tuple of (x, y) coordinates for
+                computing the parameter by minimizing prediction error. Defaults to None.
+            bearing_parameter (float, optional): The bearing parameter value to set directly.
+                Defaults to None.
 
         Returns:
             None
 
         Raises:
+            ValueError: If both bearing_point and bearing_parameter are provided.
             Exception: If an error occurs while setting the bearing parameter.
         """
+        if bearing_point is not None and bearing_parameter is not None:
+            raise ValueError("Only one of bearing_point or bearing_parameter should be provided")
         try:
-            self.predict_model.set_bearing_parameter(bearing_parameter=bearing_parameter)
+            self.predict_model.set_bearing_parameter(bearing_point=bearing_point, bearing_parameter=bearing_parameter)
         except Exception as e:
             raise Exception(f"Error set bearing parameter: {str(e)}")
 
@@ -301,25 +309,46 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error get bearing line: {str(e)}")
 
-    def simulation_thinning(self) -> tuple[dict[str, list[float]], list[dict[str, float]]]:
+    def simulation_thinning(self, start_date: float = None) -> list[dict[str, float]]:
         """Simulate forest thinning based on growth and logging predictions.
 
-        Runs a thinning simulation using the model’s growth, recovery, logging, and economic
-        lines, tracking the forest’s state and recording thinning events.
+        Runs a thinning simulation using the model's growth, recovery, logging, and economic
+        lines, starting from the specified date if provided. Records thinning events, including
+        a final event with a near-zero value (0.000000000001) at the end of the simulation range.
+
+        Args:
+            start_date (float, optional): The starting date for the simulation. If None,
+                starts from the beginning. Defaults to None.
 
         Returns:
-            tuple[list[dict], list[dict]]: A tuple containing:
-                - List of dictionaries with 'x' and 'value' keys for the growth track.
-                - List of dictionaries with 'x', 'past_value', and 'new_value' keys for thinning events.
+            list[dict[str, float]]: A list of dictionaries with 'x', 'past_value', and
+                'new_value' keys for thinning events.
 
         Raises:
             Exception: If the model or required lines are not initialized.
         """
         try:
-            result = self.predict_model.simulation_thinning()
+            result = self.predict_model.simulation_thinning(start_date=start_date)
             return result
         except Exception as e:
             raise Exception(f"Error simulation thinning: {str(e)}")
+
+    def initialize_track_thinning(self) -> None:
+        """Initialize the growth track with thinning events.
+
+        Generates the forest growth trajectory incorporating thinning events, updating the
+        model's growth track data.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the thinning events list is not initialized or an error occurs.
+        """
+        try:
+            self.predict_model.initialize_track_thinning()
+        except Exception as e:
+            raise Exception(f"Error initializing thinning track: {str(e)}")
 
     def save_model(self) -> None:
         """Save the trained prediction model.
@@ -436,20 +465,25 @@ class PredictModelService:
         step: float = None,
         start_parameter: float = 0,
     ) -> list[float]:
-        """Generate a list of predicted values for a line type over a range of x-values.
+        """Generate x and y values for a line type over a range of x-values.
 
         Validates that start_parameter is zero for growth or recovery lines and computes
-        predictions for the specified x-range with the given step size.
+        predictions for the specified x-range with the given step size, returning both
+        x-values and corresponding y-values.
 
         Args:
             type_line (TypeLine): The type of line to predict (e.g., growth, logging).
-            start_x (float, optional): The starting x-value for the range. Defaults to None.
-            end_x (float, optional): The ending x-value for the range. Defaults to None.
-            step (float, optional): The step size between x-values. Defaults to None.
-            start_parameter (float, optional): Starting parameter, must be 0 for growth/recovery lines. Defaults to 0.
+            start_x (float, optional): The starting x-value for the range. Defaults to None
+                (uses model’s x_min).
+            end_x (float, optional): The ending x-value for the range. Defaults to None
+                (uses model’s x_max).
+            step (float, optional): The step size between x-values. Defaults to None
+                (uses model’s step).
+            start_parameter (float, optional): Starting parameter, must be 0 for
+                growth/recovery lines. Defaults to 0.
 
         Returns:
-            list[float]: A list of predicted y-values for the specified range.
+            tuple[list[float], list[float]]: A tuple of (x_values, y_values) for the predicted line.
 
         Raises:
             ValueError: If start_parameter is non-zero for growth or recovery lines.
@@ -465,3 +499,142 @@ class PredictModelService:
             return result
         except Exception as e:
             raise Exception(f"Error get predict line: {str(e)}")
+
+    def get_list_record_planned_thinning(self) -> list[dict[str, float]]:
+        """Retrieve the list of planned thinning events.
+
+        Returns the recorded thinning events from the simulation, each containing the date,
+        value before thinning, and value after thinning.
+
+        Returns:
+            list[dict[str, float]]: A list of dictionaries with 'x', 'past_value', and 'new_value' keys
+                for thinning events.
+
+        Raises:
+            Exception: If the thinning events list is not initialized or an error occurs.
+        """
+        try:
+            result = self.predict_model.get_list_record_planned_thinning()
+            return result
+        except Exception as e:
+            raise Exception(f"Error retrieving planned thinning events: {str(e)}")
+
+    def get_list_value_track_thinning(self) -> dict[str, list[float]]:
+        """Retrieve the growth track with thinning events.
+
+        Returns the x and y values representing the forest growth trajectory, accounting for
+        thinning events.
+
+        Returns:
+            dict[str, list[float]]: A dictionary with 'x' and 'y' keys containing lists of
+                x-values and y-values for the growth track.
+
+        Raises:
+            Exception: If the growth track is not initialized or an error occurs.
+        """
+        try:
+            result = self.predict_model.get_list_value_track_thinning()
+            return result
+        except Exception as e:
+            raise Exception(f"Error retrieving growth track: {str(e)}")
+
+    def rewrite_item_record_planed_thinning(self, index: int, item: dict[str, float]) -> None:
+        """Rewrite a thinning event at the specified index and update the growth track.
+
+        Replaces the thinning event at the given index with the provided item, adds a new
+        thinning event at the date specified in the item, and reinitializes the growth track.
+
+        Args:
+            index (int): The index of the thinning event to rewrite.
+            item (dict[str, float]): A dictionary with 'x', 'past_value', and 'new_value' keys
+                representing the new thinning event.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or an error occurs during the rewrite process.
+        """
+        try:
+            self.predict_model.rewrite_item_record_planed_thinning(index=index, item=item)
+        except Exception as e:
+            raise Exception(f"Error rewriting thinning event: {str(e)}")
+
+    def add_thinning(self, date_thinning: float) -> None:
+        """Add a thinning event at the specified date.
+
+        Inserts a new thinning event at the given date, updating the model's thinning simulation
+        and growth track.
+
+        Args:
+            date_thinning (float): The date (x-value) for the thinning event.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or an error occurs during thinning addition.
+        """
+        try:
+            self.predict_model.add_thinning(date_thinning=date_thinning)
+        except Exception as e:
+            raise Exception(f"Error adding thinning event: {str(e)}")
+
+    def correct_thinning(self, date_thinning: float, value_thinning: float) -> None:
+        """Correct the value of a thinning event at the specified date.
+
+        Updates the thinning event at the given date with a new value, recalculating the
+        simulation and growth track from that point.
+
+        Args:
+            date_thinning (float): The date (x-value) of the thinning event to correct.
+            value_thinning (float): The new value after thinning.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or an error occurs during correction.
+        """
+        try:
+            self.predict_model.correct_thinning(date_thinning=date_thinning, value_thinning=value_thinning)
+        except Exception as e:
+            raise Exception(f"Error correcting thinning event: {str(e)}")
+
+    def delete_thinning(self, index: int) -> None:
+        """Delete a thinning event at the specified index.
+
+        Removes the thinning event at the given index from the model's list of planned
+        thinning events, updating the simulation and growth track accordingly.
+
+        Args:
+            index (int): The index of the thinning event to delete.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or an error occurs during deletion.
+        """
+        try:
+            self.predict_model.delete_thinning(index=index)
+        except Exception as e:
+            raise Exception(f"Error deleting thinning event: {str(e)}")
+
+    def check_graph_save_forest(self) -> None:
+        """Check and adjust thinning events based on protective forest mode.
+
+        Calls the model's method to verify and correct thinning events according to the
+        protective forest mode flag, removing events that occur after the thinning age
+        limit (age_thinning_save or age_thinning) and updating the growth track.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs during the check or update process.
+        """
+        try:
+            self.predict_model.check_graph_save_forest()
+        except Exception as e:
+            raise Exception(f"Error checking graph for save forest: {str(e)}")
