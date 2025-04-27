@@ -235,12 +235,17 @@ class Graph:
     def set_bearing_parameter(self, bearing_point: tuple[float, float] = None, bearing_parameter: float = None) -> None:
         """Set the bearing parameter for the growth line.
 
-        Assigns the bearing parameter either as the provided value or as the average of
-        the minimum and maximum logging lines’ initial y-values if none is provided.
+        Assigns the bearing parameter either as the provided value, from a bearing point by
+        finding the starting parameter that minimizes the difference between predicted and
+        actual y-values, or as the average of the minimum and maximum logging lines’ initial
+        y-values if neither is provided.
 
         Args:
-            bearing_point: tuple[float, float]
-            bearing_parameter (float, optional): The bearing parameter value. Defaults to None.
+            bearing_point (tuple[float, float], optional): A tuple of (x, y) coordinates for
+                the bearing point. If provided, the parameter is calculated to minimize the
+                difference from the growth line prediction. Defaults to None.
+            bearing_parameter (float, optional): The bearing parameter value. If provided,
+                used directly. Defaults to None.
 
         Returns:
             None
@@ -723,29 +728,28 @@ class Graph:
 
         index = 0
         for i in range(len(list_record_planned_thinning)):
-            if list_record_planned_thinning[i]["x"] < date_thinning:
-                continue
-            else:
+            if list_record_planned_thinning[i]["x"] <= date_thinning:
                 index = i
+            else:
                 break
 
         if index > 0:
-            start_parameter = list_record_planned_thinning[index - 1]["x"]
+            start_parameter = list_record_planned_thinning[index]["x"]
             old_value = self.predict_value(
                 type_line=TypeLine.RECOVERY_LINE, X=date_thinning, start_parameter=start_parameter
             )
         else:
             start_parameter = 0
             old_value = None
-            for i in range(len(self.bearing_value_y_line)):
-                if self.bearing_value_y_line[i] <= date_thinning:
+            for i in range(len(self.list_value_x)):
+                if self.list_value_x[i] <= date_thinning:
                     old_value = self.bearing_value_y_line[i]
         new_value = None
         for i in range(len(self.list_value_x)):
             if self.list_value_x[i] <= date_thinning:
                 new_value = self.list_value_y_min_logging[i]
 
-        list_record_planned_thinning = list_record_planned_thinning[:index]
+        list_record_planned_thinning = list_record_planned_thinning[: index + 1]
         list_record_planned_thinning.append(
             {
                 "x": date_thinning,
@@ -815,38 +819,35 @@ class Graph:
 
         self.initialize_track_thinning()
 
-    def delete_thinning(self, date_thinning: float) -> None:
-        """Delete a thinning event at the specified date.
+    def delete_thinning(self, index: int) -> None:
+        """Delete a thinning event at the specified index and update the growth track.
 
-        Removes the thinning event at the given date, adjusts the subsequent event's values
-        based on the growth or recovery line, and reinitializes the growth track.
+        Removes the thinning event at the given index, recalculates the subsequent event’s
+        values using the growth or recovery line based on prior events, and reinitializes
+        the growth track.
 
         Args:
-            date_thinning (float): The date (x-value) of the thinning event to delete.
+            index (int): The index of the thinning event to delete.
 
         Returns:
             None
 
         Raises:
-            ValueError: If the thinning events list is not initialized or date_thinning is invalid.
+            IndexError: If the index is out of range for the thinning events list.
         """
-        # TODO: Доделать!!!!!
         list_record_planned_thinning = self.list_record_planned_thinning
-        index = 0
-        for i in range(len(list_record_planned_thinning)):
-            if list_record_planned_thinning[i]["x"] < date_thinning:
-                continue
-            else:
-                index = i
-                break
 
-        past_element = list_record_planned_thinning[index - 1]
+        if index > 0:
+            past_element = list_record_planned_thinning[index - 1]
+            start_parameter = past_element["x"]
+        else:
+            start_parameter = self.bearing_value_parameter
         next_element = list_record_planned_thinning[index + 1]
         new_value = next_element["new_value"]
         new_x = next_element["x"]
-        start_parameter = past_element["x"]
-        if start_parameter == 0:
-            next_value = self.predict_value(type_line=TypeLine.GROWTH_LINE, start_parameter=start_parameter)
+
+        if index == 0:
+            next_value = self.predict_value(type_line=TypeLine.GROWTH_LINE, X=new_x, start_parameter=start_parameter)
         else:
             next_value = self.predict_value(type_line=TypeLine.RECOVERY_LINE, X=new_x, start_parameter=start_parameter)
 
@@ -858,6 +859,33 @@ class Graph:
             "new_value": new_value,
         }
 
+        self.list_record_planned_thinning = list_record_planned_thinning
+        self.initialize_track_thinning()
+
+    def check_graph_save_forest(self):
+        """Check and adjust thinning events based on protective forest mode.
+
+        Removes thinning events that occur after the thinning age limit (determined by
+        flag_save_forest) and reinitializes the growth track. Uses age_thinning_save for
+        protective forests or age_thinning otherwise.
+
+        Returns:
+            None
+
+        Raises:
+            IndexError: If the thinning events list is empty or has fewer than two events.
+        """
+        list_record_planned_thinning = self.list_record_planned_thinning
+        if self.flag_save_forest:
+            age_cancel_thinning = self.age_thinning_save
+        else:
+            age_cancel_thinning = self.age_thinning
+        while True:
+            if list_record_planned_thinning[-2].get("x") > age_cancel_thinning:
+                del list_record_planned_thinning[-2]
+            if list_record_planned_thinning[-2].get("x") < age_cancel_thinning:
+                break
+        self.list_record_planned_thinning = list_record_planned_thinning
         self.initialize_track_thinning()
 
     def simulation_thinning(
@@ -865,19 +893,21 @@ class Graph:
     ) -> tuple[dict[str, list[float]], list[dict[str, float]]]:
         """Simulate forest thinning based on growth and logging lines.
 
-        Tracks the forest's growth along the bearing line, triggers thinning when the value
+        Tracks forest growth along the bearing line, triggers thinning when the value
         exceeds the economic minimum and bearing line, and switches to the recovery line
-        post-thinning. Records thinning events starting from start_date if provided.
+        post-thinning. Records thinning events starting from start_date if provided, adding
+        a final event with a near-zero value at the end of the simulation range.
 
         Args:
-            start_date (float, optional): The starting date for the simulation. If None, starts from the beginning.
-                Defaults to None.
-            parameter_predict (float, optional): The starting parameter for recovery line predictions if start_date
-                is provided. Defaults to None.
+            start_date (float, optional): The starting date for the simulation. If None,
+                starts from the beginning. Defaults to None.
+            parameter_predict (float, optional): The starting parameter for recovery line
+                predictions if start_date is provided. Defaults to None.
 
         Returns:
-            list[dict[str, float]]: A list of dictionaries with 'x', 'past_value', and 'new_value' keys for
-                thinning events.
+            list[dict[str, float]]: A list of dictionaries with 'x', 'past_value', and
+                'new_value' keys for thinning events, including a final event with a near-zero
+                value (0.000000000001).
 
         Raises:
             ValueError: If required lines (bearing, logging, economic) or x-values are not initialized.
@@ -909,9 +939,6 @@ class Graph:
             current_value = None
             if parameter_predict is not None:
                 start_parameter = parameter_predict
-                # list_value_x = list_value_x[1:]
-                # bearing_value_y_line = bearing_value_y_line[1:]
-                # list_value_y_min_economic = list_value_y_min_economic[1:]
             else:
                 start_parameter = list_value_x[0]
 
@@ -973,11 +1000,11 @@ class Graph:
         """Initialize the growth track with thinning events.
 
         Generates x and y values for the forest growth trajectory, incorporating thinning
-        events from list_record_planned_thinning, using growth and recovery lines.
+        events from list_record_planned_thinning, using growth and recovery lines. Stores
+        the result in list_value_track_thinning.
 
         Returns:
-            dict[str, list[float]]: A dictionary with 'x' and 'y' keys containing lists of
-                x-values and y-values for the growth track.
+            None
 
         Raises:
             Exception: If list_record_planned_thinning is not initialized.
@@ -1013,6 +1040,9 @@ class Graph:
                 current_value = new_value
 
                 number_thinning += 1
+                # if new_value == self.list_value_y_min_logging[current_index]:
+                #     start_parameter = self.list_value_x[current_index]
+                # else:
                 if number_thinning < len(self.list_record_planned_thinning):
                     true_value_next = self.list_record_planned_thinning[number_thinning]["past_value"]
                     date_next = self.list_record_planned_thinning[number_thinning]["x"]

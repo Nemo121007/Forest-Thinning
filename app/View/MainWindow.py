@@ -277,7 +277,7 @@ class MainWindow(QWidget):
         save_check_box = QCheckBox()
         save_check_box.setChecked(self.flag_save_forest)
         self.save_check_box = save_check_box
-        save_check_box.stateChanged.connect(lambda: self.replace_predict(flag_safe_forest=save_check_box.isChecked()))
+        save_check_box.stateChanged.connect(lambda: self.change_save_forest())
         save_widget.addWidget(save_forest)
         save_widget.addWidget(save_check_box)
         main_setting.addLayout(save_widget, 1, 1)
@@ -381,22 +381,20 @@ class MainWindow(QWidget):
 
     def _create_info_block(
         self,
-        date_growth: float = None,
-        date_fell: float = None,
-        reserve_before: float = None,
-        reserve_after: float = None,
+        index: float,
+        info_block: dict[str, float],
     ) -> QWidget:
-        """Create an information block for thinning data.
+        """Create an information block for thinning event data.
 
-        Constructs a QWidget displaying thinning event details, including growth and felling
-        dates, reserve values before and after thinning, and intensity metrics. Includes a
-        cancel button to delete the thinning event.
+        Constructs a QWidget displaying details of a thinning event, including the felling
+        date, reserve values before and after thinning, and fullness values. Includes a
+        cancel button to delete the thinning event by index.
 
         Args:
-            date_growth (float, optional): The growth date (x-value). Defaults to None.
-            date_fell (float, optional): The felling date (x-value). Defaults to None.
-            reserve_before (float, optional): The reserve value before thinning. Defaults to None.
-            reserve_after (float, optional): The reserve value after thinning. Defaults to None.
+            index (float): The index of the thinning event in the list of planned thinnings.
+            info_block (dict[str, float]): A dictionary containing thinning event data with
+                keys 'x' (felling date), 'reserve_before', 'reserve_after', 'past_value'
+                (fullness before), and 'new_value' (fullness after).
 
         Returns:
             QWidget: The information block widget with labels and a cancel button.
@@ -410,29 +408,18 @@ class MainWindow(QWidget):
         main_info_block_layout.setContentsMargins(5, 0, 5, 0)
         main_info_block_layout.setSpacing(5)
 
-        date_growth_label = QLabel("Дата роста")
-        date_growth_label.setFixedHeight(20)
-        date_growth_label.setFixedWidth(90)
-        main_info_block_layout.addWidget(date_growth_label, 0, 0)
-
-        date_growth_value = QLabel("Date")
-        date_growth_value.setFixedHeight(20)
-        date_growth_value.setFixedWidth(45)
-        main_info_block_layout.addWidget(date_growth_value, 0, 1)
-        if date_growth is not None:
-            date_growth_value.setText(f"{date_growth:.2f}")
-
         date_fell_label = QLabel("Дата рубки")
         date_fell_label.setFixedHeight(20)
         date_fell_label.setFixedWidth(90)
-        main_info_block_layout.addWidget(date_fell_label, 0, 2)
+        main_info_block_layout.addWidget(date_fell_label, 0, 0)
 
         date_fell_value = QLabel("Date")
         date_fell_value.setFixedHeight(20)
         date_fell_value.setFixedWidth(45)
-        main_info_block_layout.addWidget(date_fell_value, 0, 3)
+        main_info_block_layout.addWidget(date_fell_value, 0, 1)
+        date_fell = info_block.get("x")
         if date_fell is not None:
-            date_fell_value.setText(f"{date_fell:.2f}")
+            date_fell_value.setText(f"{date_fell:.0f}")
 
         # Запас до рубки (Мд)
         reserve_before_label = QLabel("Мд")
@@ -444,8 +431,9 @@ class MainWindow(QWidget):
         reserve_before_value.setFixedHeight(20)
         reserve_before_value.setFixedWidth(45)
         main_info_block_layout.addWidget(reserve_before_value, 1, 1)
+        reserve_before = info_block.get("reserve_before")
         if reserve_before is not None:
-            reserve_before_value.setText(f"{reserve_before:.2f}")
+            reserve_before_value.setText(f"{reserve_before:.1f}")
 
         # Запас после рубки (Мп)
         reserve_after_label = QLabel("Мп")
@@ -457,8 +445,9 @@ class MainWindow(QWidget):
         reserve_after_value.setFixedHeight(20)
         reserve_after_value.setFixedWidth(45)
         main_info_block_layout.addWidget(reserve_after_value, 1, 3)
+        reserve_after = info_block.get("reserve_after")
         if reserve_after is not None:
-            reserve_after_value.setText(f"{reserve_after:.2f}")
+            reserve_after_value.setText(f"{reserve_after:.1f}")
 
         # Абсолютная полнота до рубки (Gад)
         value_before_label = QLabel("Gад")
@@ -470,8 +459,9 @@ class MainWindow(QWidget):
         value_before_value.setFixedHeight(20)
         value_before_value.setFixedWidth(45)
         main_info_block_layout.addWidget(value_before_value, 2, 1)
-        if reserve_before is not None:
-            value_before_value.setText(f"{reserve_before:.2f}")
+        fullness_before = info_block.get("past_value")
+        if fullness_before is not None:
+            value_before_value.setText(f"{fullness_before:.1f}")
 
         # Абсолютная полнота после рубки (Gап)
         value_after_label = QLabel("Gап")
@@ -483,8 +473,9 @@ class MainWindow(QWidget):
         value_after_value.setFixedHeight(20)
         value_after_value.setFixedWidth(45)
         main_info_block_layout.addWidget(value_after_value, 2, 3)
-        if reserve_after is not None:
-            value_after_value.setText(f"{reserve_after:.2f}")
+        fullness_after = info_block.get("new_value")
+        if fullness_after is not None:
+            value_after_value.setText(f"{fullness_after:.0f}")
 
         # Интенсивность по запасу, %
         intensity_by_reserve_label = QLabel("Инт.зап, %")
@@ -496,8 +487,8 @@ class MainWindow(QWidget):
         intensity_by_reserve_value.setFixedHeight(20)
         intensity_by_reserve_value.setFixedWidth(45)
         main_info_block_layout.addWidget(intensity_by_reserve_value, 3, 1)
-        if reserve_before and reserve_after:
-            intensity_by_reserve_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
+        # if reserve_before and reserve_after:
+        #     intensity_by_reserve_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
 
         # Интенсивность по полноте, %
         intensity_by_volume_label = QLabel("Инт. об, %")
@@ -509,14 +500,14 @@ class MainWindow(QWidget):
         intensity_by_volume_value.setFixedHeight(20)
         intensity_by_volume_value.setFixedWidth(45)
         main_info_block_layout.addWidget(intensity_by_volume_value, 3, 3)
-        if reserve_before and reserve_after:
-            intensity_by_volume_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
+        # if reserve_before and reserve_after:
+        #     intensity_by_volume_value.setText(f"{((reserve_before - reserve_after) / reserve_before * 100):.0f}")
 
         # Кнопки управления
         btn_cancel = QPushButton()
         btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
         btn_cancel.setFixedWidth(25)
-        btn_cancel.clicked.connect(lambda: self.predict_model.delete_thinning(date_thinning=date_fell))
+        btn_cancel.clicked.connect(lambda: self.delete_thinning(index=index))
         main_info_block_layout.addWidget(btn_cancel, 0, 4)
 
         main_info_block.setLayout(main_info_block_layout)
@@ -528,9 +519,10 @@ class MainWindow(QWidget):
 
         Creates or updates a pyqtgraph PlotWidget to display minimum logging, maximum
         logging, and economic minimum lines, with a filled area between economic minimum
-        and maximum logging lines. Sets axis labels and limits based on model data.
-        Adds double-click event handling for the predict line thinning with an increased
-        detection area using a buffer zone. Updates UI blocks with thinning data.
+        and maximum logging lines. Repeats the minimum logging line for visibility. Sets
+        axis labels and limits based on model data. Adds double-click event handling for
+        the predict line thinning with an increased detection area using a buffer zone.
+        Updates UI blocks with thinning data via create_blocks_with_thinning_data.
 
         Returns:
             None
@@ -789,6 +781,41 @@ class MainWindow(QWidget):
         else:
             super(plot_widget.__class__, plot_widget).mouseDoubleClickEvent(event)
 
+    def delete_thinning(self, index: int) -> None:
+        """Delete a thinning event by index and update the plot.
+
+        Removes the thinning event at the specified index from the prediction model,
+        refreshes the list of planned thinnings and the thinning track, and updates the plot.
+
+        Args:
+            index (int): The index of the thinning event to delete.
+
+        Returns:
+            None
+        """
+        self.predict_model.delete_thinning(index=index)
+        self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
+        self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+        self._update_graphic()
+
+    def change_save_forest(self):
+        """Update the protective forest mode and refresh the plot.
+
+        Sets the protective forest flag based on the UI checkbox state, updates the
+        prediction model, checks the graph for protective forest constraints, refreshes
+        the thinning data, and updates the plot.
+
+        Returns:
+            None
+        """
+        flag_save_forest = self.save_check_box.isChecked()
+        self.flag_save_forest = flag_save_forest
+        self.predict_model.set_flag_save_forest(flag_save_forest=flag_save_forest)
+        self.predict_model.check_graph_save_forest()
+        self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
+        self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+        self._update_graphic()
+
     def replace_graphic(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
         """Replace the current graphic with updated area, breed, or condition.
 
@@ -930,27 +957,25 @@ class MainWindow(QWidget):
         self.form_combo_condition.blockSignals(False)
 
     def replace_predict(self, start_parameter: str = None, flag_save_forest: bool = None) -> None:
-        """Update prediction data with new bearing parameter or forest mode.
+        """Update prediction data and refresh the plot.
 
-        Updates the bearing parameter (if provided) and protective forest flag, initializes
-        the bearing line, runs a thinning simulation, and refreshes the plot. If start_parameter
-        is not provided, uses the existing bearing parameter from the model.
+        Runs a thinning simulation and initializes the thinning track if a bearing line
+        exists, then updates the thinning data and plot. Currently ignores start_parameter
+        and flag_save_forest parameters.
 
         Args:
             start_parameter (str, optional): The new bearing parameter value (converted to float).
-                If None, uses the model's current bearing parameter. Defaults to None.
-            flag_save_forest (bool, optional): Indicates protective forest mode. If None, retains
-                the current mode. Defaults to None.
+                Ignored in the current implementation. Defaults to None.
+            flag_save_forest (bool, optional): Indicates protective forest mode.
+                Ignored in the current implementation. Defaults to None.
 
         Returns:
             None
 
         Raises:
-            ValueError: If start_parameter is provided but cannot be converted to a float.
+            ValueError: If start_parameter is provided but cannot be
+            converted to a float (not applicable in current implementation).
         """
-        if flag_save_forest is not None:
-            self.flag_save_forest = flag_save_forest
-            self.predict_model.set_flag_save_forest(flag_save_forest=flag_save_forest)
         if self.list_value_y_bearing_line:
             self.predict_model.simulation_thinning()
             self.predict_model.initialize_track_thinning()
@@ -980,18 +1005,11 @@ class MainWindow(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
-        past_x = 0
         # Создаем новые блоки с данными
         if self.list_record_planned_thinning:
-            for record in self.list_record_planned_thinning:
-                new_x, past_value, new_value = record.get("x"), record.get("past_value"), record.get("new_value")
-
-                info_block = self._create_info_block(
-                    date_growth=past_x, date_fell=new_x, reserve_before=past_value, reserve_after=new_value
-                )
+            for index, record in enumerate(self.list_record_planned_thinning):
+                info_block = self._create_info_block(index=index, info_block=record)
                 blocks_layout.addWidget(info_block)
-
-                past_x = new_x
 
 
 if __name__ == "__main__":
