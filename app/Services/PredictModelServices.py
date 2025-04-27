@@ -538,6 +538,28 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error retrieving growth track: {str(e)}")
 
+    def rewrite_item_record_planed_thinning(self, index: int, item: dict[str, float]) -> None:
+        """Rewrite a thinning event at the specified index and update the growth track.
+
+        Replaces the thinning event at the given index with the provided item, adds a new
+        thinning event at the date specified in the item, and reinitializes the growth track.
+
+        Args:
+            index (int): The index of the thinning event to rewrite.
+            item (dict[str, float]): A dictionary with 'x', 'past_value', and 'new_value' keys
+                representing the new thinning event.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If the model is not initialized or an error occurs during the rewrite process.
+        """
+        try:
+            self.predict_model.rewrite_item_record_planed_thinning(index=index, item=item)
+        except Exception as e:
+            raise Exception(f"Error rewriting thinning event: {str(e)}")
+
     def add_thinning(self, date_thinning: float) -> None:
         """Add a thinning event at the specified date.
 
@@ -615,4 +637,4 @@ class PredictModelService:
         try:
             self.predict_model.check_graph_save_forest()
         except Exception as e:
-            raise Exception(str(e))
+            raise Exception(f"Error checking graph for save forest: {str(e)}")

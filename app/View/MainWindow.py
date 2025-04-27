@@ -413,13 +413,16 @@ class MainWindow(QWidget):
         date_fell_label.setFixedWidth(90)
         main_info_block_layout.addWidget(date_fell_label, 0, 0)
 
-        date_fell_value = QLabel("Date")
+        date_fell_value = QLineEdit("Date")
         date_fell_value.setFixedHeight(20)
         date_fell_value.setFixedWidth(45)
         main_info_block_layout.addWidget(date_fell_value, 0, 1)
         date_fell = info_block.get("x")
         if date_fell is not None:
             date_fell_value.setText(f"{date_fell:.0f}")
+        date_fell_value.textChanged.connect(
+            lambda: self.update_info_block(index=index, info_block=info_block, date_thinning=date_fell_value.text())
+        )
 
         # Запас до рубки (Мд)
         reserve_before_label = QLabel("Мд")
@@ -513,6 +516,56 @@ class MainWindow(QWidget):
         main_info_block.setLayout(main_info_block_layout)
 
         return main_info_block
+
+    def update_info_block(
+        self,
+        index: int,
+        info_block: dict[str, float],
+        date_thinning: str = None,
+        height: str = None,
+    ):
+        """Update a thinning event information block and refresh the plot.
+
+        Updates the thinning event data in info_block with a new date_thinning if provided
+        and valid (within the allowed range between adjacent events). Calls the prediction
+        model to rewrite the thinning event, refreshes the thinning data, and updates the plot.
+        Ignores the height parameter in the current implementation.
+
+        Args:
+            index (int): The index of the thinning event in the list of planned thinnings.
+            info_block (dict[str, float]): The dictionary containing thinning event data with
+                keys 'x', 'past_value', 'new_value', and optionally 'reserve_before', 'reserve_after'.
+            date_thinning (str, optional): The new felling date as a string (converted to int).
+                Defaults to None.
+            height (str, optional): Ignored in the current implementation. Defaults to None.
+
+        Returns:
+            None
+        """
+        if date_thinning == "":
+            return
+        if date_thinning is not None and date_thinning.isdigit():
+            date_thinning = int(date_thinning)
+            if date_thinning == 0:
+                return
+            if index == 0:
+                left_date = 0
+            else:
+                left_date = self.list_record_planned_thinning[index - 1].get("x")
+            if index == len(self.list_record_planned_thinning) - 1:
+                right_date = self.age_thinning
+            else:
+                right_date = self.list_record_planned_thinning[index + 1].get("x")
+            if date_thinning > left_date and date_thinning < right_date:
+                info_block["x"] = date_thinning
+            else:
+                return
+        if height is not None:
+            pass
+        self.predict_model.rewrite_item_record_planed_thinning(index=index, item=info_block)
+        self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
+        self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
+        self._update_graphic()
 
     def _update_graphic(self) -> None:
         """Update the plot widget with prediction data and handle double-click events on the predict line.
@@ -686,8 +739,9 @@ class MainWindow(QWidget):
         """Handle right-click events on the plot to add a bearing point.
 
         Processes right-click events to add a bearing point at the clicked position after
-        user confirmation, updates the bearing line, and refreshes the plot. Ignores clicks
-        outside the valid y-range defined by minimum and maximum logging lines.
+        user confirmation via a dialog, updates the bearing line, and refreshes the plot.
+        Ignores clicks if the y-value is not within the valid range defined by minimum and
+        maximum logging lines (i.e., y >= min_y or y <= max_y).
 
         Args:
             plot_widget (pg.PlotWidget): The plot widget where the event occurred.
@@ -960,21 +1014,15 @@ class MainWindow(QWidget):
         """Update prediction data and refresh the plot.
 
         Runs a thinning simulation and initializes the thinning track if a bearing line
-        exists, then updates the thinning data and plot. Currently ignores start_parameter
-        and flag_save_forest parameters.
+        exists, then updates the thinning data and plot. The start_parameter and
+        flag_save_forest parameters are currently ignored.
 
         Args:
-            start_parameter (str, optional): The new bearing parameter value (converted to float).
-                Ignored in the current implementation. Defaults to None.
-            flag_save_forest (bool, optional): Indicates protective forest mode.
-                Ignored in the current implementation. Defaults to None.
+            start_parameter (str, optional): Ignored in the current implementation. Defaults to None.
+            flag_save_forest (bool, optional): Ignored in the current implementation. Defaults to None.
 
         Returns:
             None
-
-        Raises:
-            ValueError: If start_parameter is provided but cannot be
-            converted to a float (not applicable in current implementation).
         """
         if self.list_value_y_bearing_line:
             self.predict_model.simulation_thinning()
@@ -989,8 +1037,8 @@ class MainWindow(QWidget):
         """Create UI information blocks for thinning simulation data.
 
         Clears existing blocks in the scroll area and generates new information blocks for
-        each thinning event in the simulation, displaying growth and felling dates, and
-        reserve values before and after thinning.
+        each thinning event in list_record_planned_thinning, displaying growth and felling
+        dates, and reserve values before and after thinning using _create_info_block.
 
         Returns:
             None

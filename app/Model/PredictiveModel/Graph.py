@@ -650,7 +650,7 @@ class Graph:
 
         Raises:
             ValueError: If the line type is not found or start_parameter is invalid.
-            Exception: If start_x is not less than end_x.
+            Exception: If start_x is greater than or equal to end_x.
         """
         if type_line != TypeLine.GROWTH_LINE and type_line != TypeLine.RECOVERY_LINE and start_parameter != 0:
             text = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
@@ -706,6 +706,33 @@ class Graph:
         """
         return self.list_value_track_thinning
 
+    def rewrite_item_record_planed_thinning(self, index: int, item: dict[str, float]) -> None:
+        """Rewrite a thinning event at the specified index and update the growth track.
+
+        Replaces the thinning event at the given index with the provided item, adds a new
+        thinning event at the date specified in the item, and reinitializes the growth track.
+
+        Args:
+            index (int): The index of the thinning event to rewrite.
+            item (dict[str, float]): A dictionary with 'x', 'past_value', and 'new_value' keys
+                representing the new thinning event.
+
+        Returns:
+            None
+
+        Raises:
+            IndexError: If the index is out of range for the thinning events list.
+            ValueError: If the item dictionary is missing required keys or contains invalid values.
+        """
+        list_record_planned_thinning = self.list_record_planned_thinning
+
+        list_record_planned_thinning[index] = item
+        self.list_record_planned_thinning = list_record_planned_thinning
+
+        self.add_thinning(item.get("x"))
+
+        self.initialize_track_thinning()
+
     def add_thinning(self, date_thinning: float) -> None:
         """Add a thinning event at the specified date.
 
@@ -728,7 +755,7 @@ class Graph:
 
         index = 0
         for i in range(len(list_record_planned_thinning)):
-            if list_record_planned_thinning[i]["x"] <= date_thinning:
+            if list_record_planned_thinning[i]["x"] < date_thinning:
                 index = i
             else:
                 break
@@ -896,7 +923,7 @@ class Graph:
         Tracks forest growth along the bearing line, triggers thinning when the value
         exceeds the economic minimum and bearing line, and switches to the recovery line
         post-thinning. Records thinning events starting from start_date if provided, adding
-        a final event with a near-zero value at the end of the simulation range.
+        a final event with a near-zero value (0.000000000001) at the end of the simulation range.
 
         Args:
             start_date (float, optional): The starting date for the simulation. If None,
