@@ -641,14 +641,14 @@ class MainWindow(QWidget):
             pen=pg.mkPen((255, 0, 255, 255), width=2),
             name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
-        # scatter_before = pg.ScatterPlotItem(
-        #     pos=list(zip(self.list_value_x, self.list_value_y_min_economic)),
-        #     size=10,
-        #     pen=pg.mkPen(None),
-        #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-        #     symbol='o'
-        # )
-        # plot_widget.addItem(scatter_before)
+        scatter_before = pg.ScatterPlotItem(
+            pos=list(zip(self.list_value_x, self.list_value_y_min_economic)),
+            size=10,
+            pen=pg.mkPen(None),
+            brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+            symbol="o",
+        )
+        plot_widget.addItem(scatter_before)
 
         # Заливка между линиями
         polygon = pg.FillBetweenItem(
@@ -696,14 +696,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen((0, 255, 0, 255), width=2),
                 name="Bearing line",
             )
-            # scatter_before = pg.ScatterPlotItem(
-            #     pos=list(zip(self.list_value_x, self.list_value_y_bearing_line)),
-            #     size=10,
-            #     pen=pg.mkPen(None),
-            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-            #     symbol='o'
-            # )
-            # plot_widget.addItem(scatter_before)
+            scatter_before = pg.ScatterPlotItem(
+                pos=list(zip(self.list_value_x, self.list_value_y_bearing_line)),
+                size=10,
+                pen=pg.mkPen(None),
+                brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+                symbol="o",
+            )
+            plot_widget.addItem(scatter_before)
 
         # Линия прогнозируемой рубки (сохраняем объект)
         if self.list_value_track_thinning:
@@ -713,14 +713,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen("r", width=2),
                 name="Predict line thinning",
             )
-            # scatter_before = pg.ScatterPlotItem(
-            #     pos=list(zip(self.list_value_track_thinning.get("x"), self.list_value_track_thinning.get("y"))),
-            #     size=10,
-            #     pen=pg.mkPen(None),
-            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-            #     symbol='o'
-            # )
-            # plot_widget.addItem(scatter_before)
+            scatter_before = pg.ScatterPlotItem(
+                pos=list(zip(self.list_value_track_thinning.get("x"), self.list_value_track_thinning.get("y"))),
+                size=10,
+                pen=pg.mkPen(None),
+                brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+                symbol="o",
+            )
+            plot_widget.addItem(scatter_before)
 
         # Легенда и подписи осей
         plot_widget.addLegend()
@@ -814,16 +814,17 @@ class MainWindow(QWidget):
                 # Проверяем, находится ли клик в пределах буфера
                 if min_distance <= Settings.DETENTION_BUFFER:
                     x, y = cast_coordinates_point(x=click_x, y=click_y)
-                    print(str("Двойной клик на линии прогнозируемой рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
                     list_date_thinning = []
                     for item in self.list_record_planned_thinning:
                         list_date_thinning.append(item.get("x"))
                     if x in list_date_thinning:
+                        print(str("Двойной клик корректировки рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
                         self.predict_model.correct_thinning(date_thinning=x, value_thinning=y)
                         self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
                         self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
                     else:
-                        self.predict_model.add_thinning(date_thinning=x)
+                        print(str("Двойной клик рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
+                        self.predict_model.add_thinning(date_thinning=x, value_thinning=y)
                         self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
                         self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
                     self._update_graphic()

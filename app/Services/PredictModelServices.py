@@ -423,7 +423,7 @@ class PredictModelService:
             test_error = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(test_error)
         try:
-            result = self.predict_model.predict_value(type_line=type_line, X=x, start_parameter=start_parameter)
+            result = self.predict_model.predict_value(type_line=type_line, x=x, start_parameter=start_parameter)
             return result
         except Exception as e:
             raise Exception(f"Error get predict value: {str(e)}")
@@ -560,14 +560,15 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error rewriting thinning event: {str(e)}")
 
-    def add_thinning(self, date_thinning: float) -> None:
+    def add_thinning(self, date_thinning: float, value_thinning: float) -> None:
         """Add a thinning event at the specified date.
 
         Inserts a new thinning event at the given date, updating the model's thinning simulation
         and growth track.
 
         Args:
-            date_thinning (float): The date (x-value) for the thinning event.
+            date_thinning (float): The x-coordinate (date) of the thinning event.
+            value_thinning (float): The y-value (past value) before thinning.
 
         Returns:
             None
@@ -576,7 +577,7 @@ class PredictModelService:
             Exception: If the model is not initialized or an error occurs during thinning addition.
         """
         try:
-            self.predict_model.add_thinning(date_thinning=date_thinning)
+            self.predict_model.add_thinning(date_thinning=date_thinning, value_thinning=value_thinning)
         except Exception as e:
             raise Exception(f"Error adding thinning event: {str(e)}")
 
