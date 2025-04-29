@@ -16,7 +16,7 @@ Dependencies:
 
 from .GraphData import GraphData
 from .LineManager import LineManager
-from .ThinningSimulator import ThinningSimulator
+from .ForestGrowthSimulator import ForestGrowthSimulator
 from .GraphSerializer import GraphSerializer
 from ...background_information.TypeLine import TypeLine
 from ...background_information.Settings import Settings
@@ -48,7 +48,7 @@ class Graph:
         """
         self.data = GraphData(name="", area="", breed="", condition="", age_thinning=0.0, age_thinning_save=0.0)
         self.line_manager = LineManager()
-        self.thinning_simulator = ThinningSimulator(graph_data=self.data, line_manager=self.line_manager)
+        self.thinning_simulator = ForestGrowthSimulator(graph_data=self.data, line_manager=self.line_manager)
         self.serializer = GraphSerializer(graph_data=self.data, line_manager=self.line_manager)
 
     def initialize_model(
@@ -88,7 +88,7 @@ class Graph:
             flag_save_forest=flag_save_forest,
         )
         self.line_manager = LineManager()
-        self.thinning_simulator = ThinningSimulator(graph_data=self.data, line_manager=self.line_manager)
+        self.thinning_simulator = ForestGrowthSimulator(graph_data=self.data, line_manager=self.line_manager)
         self.serializer = GraphSerializer(graph_data=self.data, line_manager=self.line_manager)
 
     def get_min_max_value(self) -> tuple[float, float, float, float]:

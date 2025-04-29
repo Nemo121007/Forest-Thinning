@@ -17,6 +17,7 @@ Dependencies:
 """
 
 import json
+from pathlib import Path
 import tarfile
 import joblib
 from ...background_information.Paths import Paths
@@ -58,14 +59,14 @@ class GraphSerializer:
         """Load graph data from a tar archive.
 
         Reads graph data from a tar archive located in the data directory, expecting a JSON
-        file (wpd.json) with line data. Updates the graph_data and line_manager with the loaded
-        data, including x and y values for supported line types.
+        file (wpd.json) in a folder named after the graph. Updates graph_data and line_manager
+        with loaded data, including x and y values for supported line types.
 
         Returns:
             None
 
         Raises:
-            FileNotFoundError: If the tar file does not exist.
+            FileNotFoundError: If the tar file does not exist in the data directory.
             ValueError: If the JSON data is invalid or missing the 'datasetColl' key.
             tarfile.TarError: If there is an error reading the tar archive.
             json.JSONDecodeError: If the JSON file cannot be decoded.
@@ -87,39 +88,42 @@ class GraphSerializer:
         except (tarfile.TarError, json.JSONDecodeError) as e:
             raise ValueError(f"Failed to load graph from tar: {e}")
 
-    def _load_data_line_one_line(self, line_data: dict) -> None:
-        """Load data for a single line from JSON data.
+    def _extract_line_data(self, line_data: dict) -> tuple[list[float], list[float]]:
+        """Extract x and y values from line data.
 
-        Processes a dictionary containing line data, extracting x and y values and associating
-        them with a TypeLine enum. Updates the line_manager with a new or existing Line object
-        and updates min/max values in graph_data. Ignores unsupported line types.
+        Processes a dictionary containing line data, extracting x and y values from the 'data'
+        field, where each item is expected to have a 'value' key with a list of [x, y].
 
         Args:
-            line_data (dict): A dictionary containing line data with 'name' and 'data' keys,
-                where 'data' is a list of dictionaries with 'value' keys containing [x, y] pairs.
+            line_data (dict): A dictionary with a 'data' key containing a list of dictionaries,
+                each with a 'value' key holding [x, y] pairs.
 
         Returns:
-            None
+            tuple[list[float], list[float]]: A tuple of (x_values, y_values) lists.
 
         Raises:
-            ValueError: If the number of x and y values does not match.
+            ValueError: If the number of x and y values does not match or if the data is malformed.
         """
         x_values = [item["value"][0] for item in line_data["data"]]
         y_values = [item["value"][1] for item in line_data["data"]]
         if len(x_values) != len(y_values):
             raise ValueError("Number of x and y values does not match")
+        return x_values, y_values
 
-        line_type = TypeLine.give_enum_from_value(line_data["name"])
-        if line_type not in (
-            TypeLine.MIN_LEVEL_LOGGING,
-            TypeLine.MAX_LEVEL_LOGGING,
-            TypeLine.ECONOMIC_MIN_LINE,
-            TypeLine.GROWTH_LINE,
-            TypeLine.RECOVERY_LINE,
-        ):
-            return
+    def _update_line(self, line_type: TypeLine, x_values: list[float], y_values: list[float]) -> None:
+        """Update or create a Line object in the LineManager.
 
-        # Используем существующий экземпляр, если он есть, иначе создаём новый
+        Updates an existing Line object or creates a new one for the specified TypeLine,
+        appending the provided x and y values to its data.
+
+        Args:
+            line_type (TypeLine): The type of line to update or create.
+            x_values (list[float]): The x-coordinates to append.
+            y_values (list[float]): The y-coordinates to append.
+
+        Returns:
+            None
+        """
         if line_type in self.line_manager.lines:
             line = self.line_manager.lines[line_type]
         else:
@@ -128,7 +132,20 @@ class GraphSerializer:
             self.line_manager.add_line(type_line=line_type, line=line)
         line.append_data(X=x_values, Y=y_values)
 
-        # Обновление min/max значений
+    def _update_graph_data_bounds(self, line_type: TypeLine, x_values: list[float], y_values: list[float]) -> None:
+        """Update the min/max bounds in GraphData based on line data.
+
+        Updates x_min, x_max, y_min, y_max, and x_min_economic in graph_data based on the
+        provided x and y values. For ECONOMIC_MIN_LINE, updates x_min_economic.
+
+        Args:
+            line_type (TypeLine): The type of line being processed.
+            x_values (list[float]): The x-coordinates to consider.
+            y_values (list[float]): The y-coordinates to consider.
+
+        Returns:
+            None
+        """
         self.graph_data.x_max = (
             max(x_values) if self.graph_data.x_max is None else max(self.graph_data.x_max, max(x_values))
         )
@@ -148,69 +165,105 @@ class GraphSerializer:
                 else min(self.graph_data.x_min_economic, min(x_values))
             )
 
-    def save_graph(self) -> None:
-        """Save graph data and line models to JSON and pickle files.
+    def _load_data_line_one_line(self, line_data: dict) -> None:
+        """Process data for a single line from JSON data.
 
-        Serializes graph metadata (from graph_data) to a JSON file and line models (from
-        line_manager) to pickle files in the model directory. Creates the model directory
-        if it does not exist.
+        Extracts the line type from the 'name' field, processes x and y values, and updates
+        the line_manager and graph_data bounds. Ignores unsupported line types.
+
+        Args:
+            line_data (dict): A dictionary containing line data with 'name' and 'data' keys.
 
         Returns:
             None
         """
-        info_graph = {
-            "name": self.graph_data.name,
-            "dict_line": {},
-            "area": self.graph_data.area,
-            "code_area": self.graph_data.code_area,
-            "breed": self.graph_data.breed,
-            "code_breed": self.graph_data.code_breed,
-            "condition": self.graph_data.condition,
-            "code_condition": self.graph_data.code_condition,
-            "age_thinning": self.graph_data.age_thinning,
-            "age_thinning_save": self.graph_data.age_thinning_save,
-            "x_max": self.graph_data.x_max,
-            "x_min": self.graph_data.x_min,
-            "y_max": self.graph_data.y_max,
-            "y_min": self.graph_data.y_min,
-            "x_min_economic": self.graph_data.x_min_economic,
-        }
+        line_type = TypeLine.give_enum_from_value(line_data["name"])
+        if line_type not in (
+            TypeLine.MIN_LEVEL_LOGGING,
+            TypeLine.MAX_LEVEL_LOGGING,
+            TypeLine.ECONOMIC_MIN_LINE,
+            TypeLine.GROWTH_LINE,
+            TypeLine.RECOVERY_LINE,
+        ):
+            return
 
-        dict_lines = {}
-        for type_line, line in self.line_manager.lines.items():
-            line_info = {
-                "type_line": type_line.value,
-                "polynomial_features": f"{type_line.value}_polynomial_features.pkl",
-                "polynomial_regression": f"{type_line.value}_polynomial_regression.pkl",
-            }
+        x_values, y_values = self._extract_line_data(line_data)
+        self._update_line(line_type, x_values, y_values)
+        self._update_graph_data_bounds(line_type, x_values, y_values)
 
-            path_graph = Paths.MODEL_DIRECTORY / self.graph_data.name
-            path_graph.mkdir(exist_ok=True)
+    def _get_json_path(self) -> Path:
+        """Generate the path to the JSON file for graph metadata.
 
-            joblib.dump(line.polynomial_features, path_graph / line_info["polynomial_features"])
-            joblib.dump(line.polynomial_regression, path_graph / line_info["polynomial_regression"])
-            dict_lines[type_line.value] = line_info
+        Returns the path to a JSON file in the model directory, named after the graph.
 
-        info_graph["dict_line"] = dict_lines
-        json_path = Paths.MODEL_DIRECTORY / f"{self.graph_data.name}.json"
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(info_graph, f, indent=4, ensure_ascii=False)
+        Returns:
+            Path: The path to the JSON file.
+        """
+        return Paths.MODEL_DIRECTORY / f"{self.graph_data.name}.json"
 
-    def load_graph(self) -> None:
-        """Load graph data and line models from JSON and pickle files.
+    def _get_model_path(self, filename: str) -> Path:
+        """Generate the path to a model file in the model directory.
 
-        Reads graph metadata from a JSON file and line models from pickle files in the model
-        directory. Updates the graph_data and line_manager with the loaded data, ensuring the
-        graph name matches.
+        Returns the path to a file in a subdirectory named after the graph within the model directory.
+
+        Args:
+            filename (str): The name of the model file (e.g., 'polynomial_features.pkl').
+
+        Returns:
+            Path: The path to the model file.
+        """
+        return Paths.MODEL_DIRECTORY / self.graph_data.name / filename
+
+    def save_graph(self) -> None:
+        """Save graph metadata and line models to JSON and pickle files.
+
+        Serializes graph_data to a JSON file and line models (polynomial features and regression)
+        to pickle files in a subdirectory named after the graph. Creates the model directory if
+        it does not exist.
 
         Returns:
             None
 
         Raises:
-            FileNotFoundError: If the JSON file does not exist.
+            OSError: If there is an error creating directories or writing files.
+        """
+        info_graph = self.graph_data.to_dict()
+        info_graph["dict_line"] = {}
+
+        dict_lines = {}
+        for type_line, line in self.line_manager.lines.items():
+            line_info = {
+                "type_line": type_line.value,
+                "polynomial_features": f"{type_line.value} polynomial_features.pkl",
+                "polynomial_regression": f"{type_line.value} polynomial_regression.pkl",
+            }
+
+            path_graph = Paths.MODEL_DIRECTORY / self.graph_data.name
+            path_graph.mkdir(exist_ok=True)
+
+            joblib.dump(line.polynomial_features, self._get_model_path(line_info["polynomial_features"]))
+            joblib.dump(line.polynomial_regression, self._get_model_path(line_info["polynomial_regression"]))
+            dict_lines[type_line.value] = line_info
+
+        info_graph["dict_line"] = dict_lines
+        with open(self._get_json_path(), "w", encoding="utf-8") as f:
+            json.dump(info_graph, f, indent=4, ensure_ascii=False)
+
+    def load_graph(self) -> None:
+        """Load graph metadata and line models from JSON and pickle files.
+
+        Reads graph metadata from a JSON file and line models from pickle files in a
+        subdirectory named after the graph. Updates graph_data and line_manager with the
+        loaded data, ensuring the graph name matches.
+
+        Returns:
+            None
+
+        Raises:
+            FileNotFoundError: If the JSON file or any model file does not exist.
             ValueError: If the JSON data is invalid or the graph name does not match.
         """
-        json_path = Paths.MODEL_DIRECTORY / f"{self.graph_data.name}.json"
+        json_path = self._get_json_path()
         if not json_path.exists():
             raise FileNotFoundError(f"JSON file {json_path} does not exist")
 
@@ -222,28 +275,12 @@ class GraphSerializer:
         if self.graph_data.name != info_graph["name"]:
             raise ValueError("Graph name mismatch")
 
-        self.graph_data.area = info_graph["area"]
-        self.graph_data.code_area = info_graph["code_area"]
-        self.graph_data.breed = info_graph["breed"]
-        self.graph_data.code_breed = info_graph["code_breed"]
-        self.graph_data.condition = info_graph["condition"]
-        self.graph_data.code_condition = info_graph["code_condition"]
-        self.graph_data.age_thinning = float(info_graph["age_thinning"])
-        self.graph_data.age_thinning_save = float(info_graph["age_thinning_save"])
-        self.graph_data.x_max = float(info_graph["x_max"])
-        self.graph_data.x_min = float(info_graph["x_min"])
-        self.graph_data.y_max = float(info_graph["y_max"])
-        self.graph_data.y_min = float(info_graph["y_min"])
-        self.graph_data.x_min_economic = float(info_graph["x_min_economic"])
+        self.graph_data.from_dict(info_graph)
 
         for key, line_info in info_graph["dict_line"].items():
             type_line = TypeLine.give_enum_from_value(line_info["type_line"])
-            polynomial_features = joblib.load(
-                Paths.MODEL_DIRECTORY / self.graph_data.name / line_info["polynomial_features"]
-            )
-            polynomial_regression = joblib.load(
-                Paths.MODEL_DIRECTORY / self.graph_data.name / line_info["polynomial_regression"]
-            )
+            polynomial_features = joblib.load(self._get_model_path(line_info["polynomial_features"]))
+            polynomial_regression = joblib.load(self._get_model_path(line_info["polynomial_regression"]))
             line = Line(
                 type_line=type_line,
                 polynomial_features=polynomial_features,
