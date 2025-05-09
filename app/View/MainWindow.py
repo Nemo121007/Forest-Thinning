@@ -641,14 +641,14 @@ class MainWindow(QWidget):
             pen=pg.mkPen((255, 0, 255, 255), width=2),
             name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
-        scatter_before = pg.ScatterPlotItem(
-            pos=list(zip(self.list_value_x, self.list_value_y_min_economic)),
-            size=10,
-            pen=pg.mkPen(None),
-            brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-            symbol="o",
-        )
-        plot_widget.addItem(scatter_before)
+        # scatter_before = pg.ScatterPlotItem(
+        #     pos=list(zip(self.list_value_x, self.list_value_y_min_economic)),
+        #     size=10,
+        #     pen=pg.mkPen(None),
+        #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+        #     symbol="o",
+        # )
+        # plot_widget.addItem(scatter_before)
 
         # Заливка между линиями
         polygon = pg.FillBetweenItem(
@@ -696,14 +696,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen((0, 255, 0, 255), width=2),
                 name="Bearing line",
             )
-            scatter_before = pg.ScatterPlotItem(
-                pos=list(zip(self.list_value_x, self.list_value_y_bearing_line)),
-                size=10,
-                pen=pg.mkPen(None),
-                brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-                symbol="o",
-            )
-            plot_widget.addItem(scatter_before)
+            # scatter_before = pg.ScatterPlotItem(
+            #     pos=list(zip(self.list_value_x, self.list_value_y_bearing_line)),
+            #     size=10,
+            #     pen=pg.mkPen(None),
+            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+            #     symbol="o",
+            # )
+            # plot_widget.addItem(scatter_before)
 
         # Линия прогнозируемой рубки (сохраняем объект)
         if self.list_value_track_thinning:
@@ -713,14 +713,14 @@ class MainWindow(QWidget):
                 pen=pg.mkPen("r", width=2),
                 name="Predict line thinning",
             )
-            scatter_before = pg.ScatterPlotItem(
-                pos=list(zip(self.list_value_track_thinning.get("x"), self.list_value_track_thinning.get("y"))),
-                size=10,
-                pen=pg.mkPen(None),
-                brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-                symbol="o",
-            )
-            plot_widget.addItem(scatter_before)
+            # scatter_before = pg.ScatterPlotItem(
+            #     pos=list(zip(self.list_value_track_thinning.get("x"), self.list_value_track_thinning.get("y"))),
+            #     size=10,
+            #     pen=pg.mkPen(None),
+            #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
+            #     symbol="o",
+            # )
+            # plot_widget.addItem(scatter_before)
 
         # Легенда и подписи осей
         plot_widget.addLegend()

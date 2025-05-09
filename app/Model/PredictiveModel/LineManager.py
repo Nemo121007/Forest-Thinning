@@ -12,6 +12,7 @@ Dependencies:
 
 from .Line import Line
 from ...background_information.TypeLine import TypeLine
+from ...background_information.General_functions import fix_monotony
 
 
 class LineManager:
@@ -147,7 +148,25 @@ class LineManager:
         line = self.get_line(type_line)
         if type_line not in (TypeLine.GROWTH_LINE, TypeLine.RECOVERY_LINE) and start_parameter != 0:
             raise ValueError(f"Invalid start_parameter {start_parameter} for {type_line}")
-        return line.predict_list_value(list_x=x_values, start_point=start_parameter)
+
+        result = line.predict_list_value(list_x=x_values, start_point=start_parameter)
+
+        ### Для тестов
+        result = fix_monotony(array=result)
+        max_line = self.get_line(type_line=TypeLine.MAX_LEVEL_LOGGING).predict_list_value(
+            list_x=x_values, start_point=0
+        )
+        min_line = self.get_line(type_line=TypeLine.MIN_LEVEL_LOGGING).predict_list_value(
+            list_x=x_values, start_point=0
+        )
+        for i in range(len(result)):
+            if result[i] < min_line[i]:
+                result[i] = min_line[i]
+            if result[i] > max_line[i]:
+                result[i] = max_line[i]
+        ###
+
+        return result
 
     def predict_line(
         self, type_line: TypeLine, start_x: float, end_x: float, step: float, start_parameter: float = 0
