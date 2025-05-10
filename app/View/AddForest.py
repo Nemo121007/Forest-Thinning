@@ -16,12 +16,13 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
-from PySide6.QtGui import QColor, QPalette, QCloseEvent
+from PySide6.QtGui import QPalette, QCloseEvent
 from PySide6.QtCore import Signal
 from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
 from ..Services.GraphicsService import GraphicsService
+from ..background_information.SettingView import SettingsView
 
 
 class AddForest(QWidget):
@@ -29,19 +30,21 @@ class AddForest(QWidget):
 
     This class provides a user interface for creating new forest graphic entries. Users
     select an area, breed, and condition from dropdowns and specify a .tar file. The form
-    validates inputs and uses GraphicsService to persist the data.
+    validates inputs, applies styles from SettingsView, and uses GraphicsService to persist
+    the data.
 
     Attributes:
         form_closed (Signal): Emitted when the form is closed.
         manager_areas (AreasService): Service for managing Area elements.
         manager_breeds (BreedsService): Service for managing Breed elements.
         manager_conditions (ConditionsService): Service for managing Condition elements.
-        manager_graphics (GraphicsService): Service for managing graphic entries.
+        manager_graphics (GraphicsService): Service
+        for managing graphic entries.
         area_combo (QComboBox): Dropdown for selecting an area.
         breed_combo (QComboBox): Dropdown for selecting a breed.
         condition_combo (QComboBox): Dropdown for selecting a condition.
-        _file_path (Path, optional): Path to the selected .tar file.
-        _file_container_form (QWidget): Container for the file input and browse button.
+        _file_path (Path | None): Path to the selected .tar file, defaults to None.
+        _file_container_form (QWidget): Container for the file input field and browse button.
     """
 
     form_closed = Signal()
@@ -49,9 +52,14 @@ class AddForest(QWidget):
     _file_path = None
 
     def __init__(self) -> None:
-        """Initializes the AddForest form.
+        """Initialize the AddForest form with UI elements and services.
 
-        Sets up the main window, layout, and UI elements.
+        Sets up the window with a title, geometry, and background color from SettingsView.
+        Initializes services for areas, breeds, conditions, and graphics. Configures the
+        layout with input fields (dropdowns and file selector) and buttons.
+
+        Returns:
+            None
         """
         super().__init__()
 
@@ -65,7 +73,7 @@ class AddForest(QWidget):
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("white"))
+        palette.setColor(QPalette.Window, SettingsView.main_background_filling_color)
         self.setPalette(palette)
 
         layout = QVBoxLayout()
@@ -81,8 +89,9 @@ class AddForest(QWidget):
     def _get_fields(self) -> QWidget:
         """Create and configure the input fields for the form.
 
-        Returns a widget containing three dropdowns (for area, breed, and condition) and
-        a file selection interface with a read-only text field and a browse button.
+        Returns a widget containing dropdowns for area, breed, and condition, styled with
+        SettingsView.background_color, and a file selection interface with a read-only text
+        field and a browse button.
 
         Returns:
             QWidget: A widget containing the configured input fields arranged vertically.
@@ -92,16 +101,19 @@ class AddForest(QWidget):
         layout = QVBoxLayout(main_widget)
 
         area_combo = QComboBox()
+        area_combo.setStyleSheet(SettingsView.background_color)
         area_combo.addItems(self.manager_areas.get_list_areas())
         self.area_combo = area_combo
         layout.addWidget(area_combo)
 
         breed_combo = QComboBox()
+        breed_combo.setStyleSheet(SettingsView.background_color)
         breed_combo.addItems(self.manager_breeds.get_list_breeds())
         self.breed_combo = breed_combo
         layout.addWidget(breed_combo)
 
         condition_combo = QComboBox()
+        condition_combo.setStyleSheet(SettingsView.background_color)
         condition_combo.addItems(self.manager_conditions.get_list_conditions())
         self.condition_combo = condition_combo
         layout.addWidget(condition_combo)
@@ -112,11 +124,13 @@ class AddForest(QWidget):
         file_layout.setContentsMargins(0, 0, 0, 0)
 
         file_path_input = QLineEdit()
+        file_path_input.setStyleSheet(SettingsView.edit_form)
         file_path_input.setPlaceholderText("Путь к файлу...")
         file_path_input.setReadOnly(True)
         file_layout.addWidget(file_path_input)
 
         browse_button = QPushButton("Обзор")
+        browse_button.setStyleSheet(SettingsView.background_color_button)
         browse_button.clicked.connect(lambda: self._browse_file(file_path_input))
         file_layout.addWidget(browse_button)
 
@@ -145,7 +159,8 @@ class AddForest(QWidget):
         """Create and configure the cancel and add buttons for the form.
 
         Returns a widget containing a cancel button (closes the form) and an add button
-        (triggers _add_graphic).
+        (triggers _add_graphic), styled with SettingsView.back_button_color and
+        SettingsView.background_color_button respectively.
 
         Returns:
             QWidget: A widget containing the configured buttons arranged horizontally.
@@ -155,13 +170,13 @@ class AddForest(QWidget):
 
         btn_cancel = QPushButton("Отмена")
         btn_cancel.setFixedHeight(50)
-        btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
+        btn_cancel.setStyleSheet(SettingsView.back_button_color)
         btn_cancel.clicked.connect(lambda: self.close())
         layout.addWidget(btn_cancel)
 
         btn_add = QPushButton("Добавить")
         btn_add.setFixedHeight(50)
-        btn_add.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_add.setStyleSheet(SettingsView.background_color_button)
         btn_add.clicked.connect(lambda: self._add_graphic())
         layout.addWidget(btn_add)
 
@@ -171,51 +186,53 @@ class AddForest(QWidget):
         """Validate the form inputs.
 
         Checks that an area, breed, condition, and file path are selected and that the
-        combination of area, breed, and condition does not already exist. Applies red
-        borders to invalid fields.
+        combination of area, breed, and condition does not already exist in GraphicsService.
+        Applies red borders (SettingsView.error_border) to invalid fields and gray borders
+        (SettingsView.true_border) to valid ones.
 
         Returns:
-            bool: True if all inputs are valid, False otherwise.
+            bool: True if all inputs are valid and the graphic does not exist, False otherwise.
         """
         flag_error = True
         if not self._file_path:
-            self._file_container_form.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self._file_container_form.setStyleSheet(SettingsView.error_border)
             flag_error = False
         else:
-            self._file_container_form.setStyleSheet("border: gray; border-radius: 5px; padding: 2px;")
+            self._file_container_form.setStyleSheet(SettingsView.true_border)
 
         if not self.area_combo.currentText():
-            self.area_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.area_combo.setStyleSheet(SettingsView.error_border)
             flag_error = False
         else:
-            self.area_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+            self.area_combo.setStyleSheet(SettingsView.true_border)
         if not self.breed_combo.currentText():
-            self.breed_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.breed_combo.setStyleSheet(SettingsView.error_border)
             flag_error = False
         else:
-            self.breed_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+            self.breed_combo.setStyleSheet(SettingsView.true_border)
         if not self.condition_combo.currentText():
-            self.condition_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.condition_combo.setStyleSheet(SettingsView.error_border)
             flag_error = False
         else:
-            self.condition_combo.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+            self.condition_combo.setStyleSheet(SettingsView.true_border)
 
         if self.manager_graphics.exist_graphic(
             name_area=self.area_combo.currentText(),
             name_breed=self.breed_combo.currentText(),
             name_condition=self.condition_combo.currentText(),
         ):
-            self.area_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
-            self.breed_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
-            self.condition_combo.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+            self.area_combo.setStyleSheet(SettingsView.error_border)
+            self.breed_combo.setStyleSheet(SettingsView.error_border)
+            self.condition_combo.setStyleSheet(SettingsView.error_border)
             flag_error = False
         return flag_error
 
     def _add_graphic(self):
         """Add a new forest graphic entry.
 
-        Validates inputs using _check_parameters and, if valid, adds the graphic via
-        GraphicsService. Closes the form on success or displays an error message on failure.
+        Validates inputs using _check_parameters. If valid, adds the graphic via
+        GraphicsService and closes the form. If invalid, exits early. Displays an error
+        message if GraphicsService raises an exception.
 
         Returns:
             None

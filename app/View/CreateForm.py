@@ -14,20 +14,29 @@ from .ElementForm import ElementForm
 from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
+from ..background_information.SettingView import SettingsView
 
 
 class CreateForm(ElementForm, QWidget):
     """A form for creating new elements in a PySide6-based GUI application.
 
-    This class extends ElementForm to provide a user interface for adding new elements of
-    type Area, Breed, or Condition. It validates user input and uses the appropriate
-    service (AreasService, BreedsService, or ConditionsService) to persist the new element.
+    This class extends ElementForm and QWidget to provide a user interface for adding new
+    elements of type Area, Breed, or Condition. It validates user input using validate_name
+    and validate_float, applies styles from SettingsView for field validation, and uses
+    the appropriate service (AreasService, BreedsService, or ConditionsService) to persist
+    the new element.
 
     Attributes:
-        form_closed (Signal): Emitted when the form is closed.
+        form_closed (Signal): Emitted when the form is closed, inherited from ElementForm.
         manager_areas (AreasService): Service for managing Area elements.
         manager_breeds (BreedsService): Service for managing Breed elements.
         manager_conditions (ConditionsService): Service for managing Condition elements.
+        form_name (QLineEdit): Input field for the element's name, inherited from ElementForm.
+        form_code_name (QLineEdit): Input field for the element's code, inherited from ElementForm.
+        form_age_input (QLineEdit, optional): Input field for breed age thinning (BREED only),
+            inherited from ElementForm.
+        form_age_save_input (QLineEdit, optional): Input field for breed age thinning save
+            (BREED only), inherited from ElementForm.
     """
 
     form_closed = Signal()
@@ -35,11 +44,15 @@ class CreateForm(ElementForm, QWidget):
     def __init__(self, type_settings: TypeSettings):
         """Initialize the CreateForm with specified type settings.
 
-        Sets up the form with a title indicating the type of element being created and
-        initializes the necessary services for persistence.
+        Sets up the form by calling ElementForm's initializer to create the UI, sets a title
+        indicating the type of element being created, and initializes services for persistence.
+        Styles are applied from SettingsView.
 
         Args:
             type_settings (TypeSettings): The type of element (AREA, BREED, or CONDITION).
+
+        Returns:
+            None
         """
         super().__init__(type_settings)
 
@@ -52,9 +65,12 @@ class CreateForm(ElementForm, QWidget):
     def _save_element(self):
         """Save the new element data.
 
-        Validates the input fields (name, code, and breed-specific fields if applicable)
-        and adds the new element using the appropriate service. Displays an error message
-        if validation fails or an exception occurs during saving.
+        Validates input fields (name, code, and breed-specific fields if applicable) using
+        validate_name and validate_float. Checks for duplicate names or codes via the
+        respective service. Applies SettingsView.error_border to invalid fields and
+        SettingsView.true_border to valid ones. Adds the new element using the appropriate
+        service and closes the form on success. Exits early if validation fails, displaying
+        an error message if an exception occurs.
 
         Returns:
             None
@@ -72,16 +88,16 @@ class CreateForm(ElementForm, QWidget):
         if self.type_settings == TypeSettings.BREED:
             if validate_float(self.form_age_input.text().replace(",", ".")) is None:
                 flag_error[2] = True
-                self.form_age_input.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_age_input.setStyleSheet(SettingsView.error_border)
             else:
                 age_thinning = float(self.form_age_input.text().replace(",", "."))
-                self.form_age_input.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+                self.form_age_input.setStyleSheet(SettingsView.true_border)
             if validate_float(self.form_age_save_input.text().replace(",", ".")) is None:
                 flag_error[3] = True
-                self.form_age_save_input.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_age_save_input.setStyleSheet(SettingsView.error_border)
             else:
                 age_thinning_save = float(self.form_age_save_input.text().replace(",", "."))
-                self.form_age_save_input.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+                self.form_age_save_input.setStyleSheet(SettingsView.true_border)
 
         if self.type_settings == TypeSettings.AREA:
             if self.manager_areas.exist_name_area(name) or not validate_name(name):
@@ -100,15 +116,15 @@ class CreateForm(ElementForm, QWidget):
                 flag_error[1] = True
 
         # Сброс стилей перед проверкой ошибок
-        self.form_name.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
-        self.form_code_name.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+        self.form_name.setStyleSheet(SettingsView.true_border)
+        self.form_code_name.setStyleSheet(SettingsView.true_border)
 
         # Обработка ошибок валидации
         if True in flag_error:
             if flag_error[0]:
-                self.form_name.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_name.setStyleSheet(SettingsView.error_border)
             if flag_error[1]:
-                self.form_code_name.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_code_name.setStyleSheet(SettingsView.error_border)
             return
 
         try:

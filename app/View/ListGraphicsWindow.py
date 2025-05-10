@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QMessageBox,
 )
-from PySide6.QtGui import QColor, QPalette, QCloseEvent
+from PySide6.QtGui import QPalette, QCloseEvent
 from PySide6.QtCore import Qt, Signal
 from ..background_information.TypeSettings import TypeSettings
 from .AddForest import AddForest
@@ -26,16 +26,18 @@ from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
 from ..Services.GraphicsService import GraphicsService
+from ..background_information.SettingView import SettingsView
 
 
 class ListGraphicsWindow(QWidget):
     """A window for displaying and managing graphics, areas, breeds, and conditions.
 
     This class provides a PySide6-based GUI to display lists of areas, breeds, conditions,
-    and graphics in scrollable areas and a table. It supports adding, editing, and deleting
-    these elements via buttons, with validation to prevent deletion of used items. It
-    interacts with services (AreasService, BreedsService, ConditionsService, GraphicsService)
-    to manage data persistence.
+    and graphics in scrollable areas and a table, styled with SettingsView. It supports
+    adding, editing, and deleting these elements via buttons, with validation to prevent
+    deletion of used items. It interacts with services (AreasService, BreedsService,
+    ConditionsService, GraphicsService) to manage data persistence. The forms list tracks
+    open forms to prevent UI overload.
 
     Attributes:
         scroll_table (QScrollArea): Scroll area for the graphics table.
@@ -46,7 +48,8 @@ class ListGraphicsWindow(QWidget):
         manager_breeds (BreedsService): Service for managing Breed elements.
         manager_conditions (ConditionsService): Service for managing Condition elements.
         manager_graphics (GraphicsService): Service for managing graphic entries.
-        forms (list): List of open form windows (CreateForm, UpdateForm, AddForest).
+        forms (list): List of open form windows (CreateForm, UpdateForm, AddForest) to manage UI.
+        form_closed (Signal): Emitted when the window is closed, inherited from QWidget.
     """
 
     form_closed = Signal()
@@ -54,8 +57,11 @@ class ListGraphicsWindow(QWidget):
     def __init__(self) -> None:
         """Initialize the ListGraphicsWindow.
 
-        Sets up the window title, geometry, background, UI components, and services.
-        Initializes scroll areas and refreshes the UI to populate data.
+        Sets up the window title, geometry, background color from SettingsView, UI components
+        (scroll areas and tables), and services. Calls refresh_ui to populate data initially.
+
+        Returns:
+            None
         """
         super().__init__()
 
@@ -72,7 +78,7 @@ class ListGraphicsWindow(QWidget):
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("white"))
+        palette.setColor(QPalette.Window, SettingsView.main_background_filling_color)
         self.setPalette(palette)
 
         layout = QVBoxLayout()
@@ -91,7 +97,8 @@ class ListGraphicsWindow(QWidget):
         """Create and configure the component lists for areas, breeds, and conditions.
 
         Returns a widget containing three vertical layouts, each with a label, a scroll
-        area for items, and an add button for areas, breeds, and conditions.
+        area for items, and an add button styled with SettingsView.background_color_button
+        for areas, breeds, and conditions.
 
         Returns:
             QWidget: A widget containing the component lists arranged horizontally.
@@ -113,7 +120,7 @@ class ListGraphicsWindow(QWidget):
 
         btn_add_area = QPushButton("Добавить регион")
         btn_add_area.setFixedHeight(50)
-        btn_add_area.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_add_area.setStyleSheet(SettingsView.background_color_button)
         btn_add_area.clicked.connect(lambda: self._add_block(type_settings=TypeSettings.AREA))
         areas_layout.addWidget(btn_add_area)
 
@@ -129,7 +136,7 @@ class ListGraphicsWindow(QWidget):
 
         btn_add_breed = QPushButton("Добавить породу")
         btn_add_breed.setFixedHeight(50)
-        btn_add_breed.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_add_breed.setStyleSheet(SettingsView.background_color_button)
         btn_add_breed.clicked.connect(lambda: self._add_block(type_settings=TypeSettings.BREED))
         breeds_layout.addWidget(btn_add_breed)
 
@@ -145,7 +152,7 @@ class ListGraphicsWindow(QWidget):
 
         btn_add_types_conditions = QPushButton("Добавить тип условий")
         btn_add_types_conditions.setFixedHeight(50)
-        btn_add_types_conditions.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_add_types_conditions.setStyleSheet(SettingsView.background_color_button)
         btn_add_types_conditions.clicked.connect(lambda: self._add_block(type_settings=TypeSettings.CONDITION))
         types_conditions_layout.addWidget(btn_add_types_conditions)
 
@@ -158,8 +165,9 @@ class ListGraphicsWindow(QWidget):
     def _create_item_block(self, str_line: str, type_settings: TypeSettings) -> QWidget:
         """Create a block for an item in a scroll area.
 
-        Creates a widget with a label for the item name and buttons for editing and
-        deleting. The delete button is disabled (gray) if the item is used in graphics.
+        Creates a widget with a label for the item name and buttons for editing (styled with
+        SettingsView.edit_button) and deleting (styled with SettingsView.cancel_button). The
+        delete button triggers an error message via QMessageBox if the item is used in graphics.
 
         Args:
             str_line (str): The name of the item (area, breed, or condition).
@@ -186,19 +194,19 @@ class ListGraphicsWindow(QWidget):
 
         btn_item_block_edit = QPushButton()
         btn_item_block_edit.setFixedSize(30, 30)
-        btn_item_block_edit.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        btn_item_block_edit.setStyleSheet(SettingsView.edit_button)
         btn_item_block_edit.clicked.connect(lambda: self._edit_block(str_line=str_line, type_settings=type_settings))
         layout_block.addWidget(btn_item_block_edit)
 
         btn_item_block_delete = QPushButton()
         btn_item_block_delete.setFixedSize(30, 30)
         if not flag_used:
-            btn_item_block_delete.setStyleSheet("background-color: #F8CECC; text-align: center;")
+            btn_item_block_delete.setStyleSheet(SettingsView.cancel_button)
             btn_item_block_delete.clicked.connect(
                 lambda: self._delete_block(str_line=str_line, type_settings=type_settings)
             )
         else:
-            btn_item_block_delete.setStyleSheet("background-color: gray; text-align: center;")
+            btn_item_block_delete.setStyleSheet(SettingsView.cancel_button)
             btn_item_block_delete.clicked.connect(
                 lambda: QMessageBox.critical(self, "Ошибка", f"Данный {type_settings.value} используется в графиках")
             )
@@ -210,7 +218,9 @@ class ListGraphicsWindow(QWidget):
         """Create and configure the graphics table with an add button.
 
         Returns a widget containing a header row, a scrollable table of graphics
-        (area, breed, condition, delete button), and an add button for new graphics.
+        (area, breed, condition, delete button styled with SettingsView.cancel_button),
+        and an add button styled with SettingsView.background_color_button. The fourth
+        column (delete button) has a fixed width.
 
         Returns:
             QWidget: A widget containing the graphics table and add button.
@@ -254,9 +264,9 @@ class ListGraphicsWindow(QWidget):
 
         scroll_table.setWidget(content_widget)
 
-        add_button = QPushButton("+")
+        add_button = QPushButton("Добавить график")
         add_button.setFixedHeight(50)
-        add_button.setStyleSheet("background-color: #D5E8D4; text-align: center;")
+        add_button.setStyleSheet(SettingsView.background_color_button)
         add_button.clicked.connect(lambda: self._add_block(type_settings=TypeSettings.GRAPHIC))
 
         main_layout.addWidget(header_widget, 0)  # Заголовки не растягиваются
@@ -268,8 +278,9 @@ class ListGraphicsWindow(QWidget):
     def refresh_ui(self) -> None:
         """Refresh all UI elements in the window.
 
-        Updates the scroll areas for areas, breeds, and conditions, and the graphics table
-        with the latest data from the respective services.
+        Updates the scroll areas for areas, breeds, and conditions via _update_scroll_areas
+        and the graphics table via _update_graphics_table with the latest data from the
+        respective services.
 
         Returns:
             None
@@ -293,7 +304,8 @@ class ListGraphicsWindow(QWidget):
         """Update a scroll area with a list of items.
 
         Populates the scroll area with item blocks (name, edit/delete buttons) for the
-        given items, alternating background colors for readability.
+        given items, alternating background colors using SettingsView.background_list_item_white
+        and SettingsView.background_list_item_gray for readability.
 
         Args:
             scroll_area (QScrollArea): The scroll area to update.
@@ -309,9 +321,9 @@ class ListGraphicsWindow(QWidget):
         for index, item in enumerate(items):
             item_block = self._create_item_block(str_line=item, type_settings=type_settings)
             if index % 2 == 0:
-                item_block.setStyleSheet("background-color: #FFFFFF;")
+                item_block.setStyleSheet(SettingsView.background_list_item_white)
             else:
-                item_block.setStyleSheet("background-color: #D3D3D3;")
+                item_block.setStyleSheet(SettingsView.background_list_item_gray)
             blocks_layout.addWidget(item_block)
 
         blocks_layout.addStretch()
@@ -322,7 +334,9 @@ class ListGraphicsWindow(QWidget):
         """Update the graphics table with the latest data.
 
         Populates the table with graphics data (area, breed, condition) and a delete
-        button for each row. Alternates row colors for readability.
+        button styled with SettingsView.cancel_button for each row. Alternates row colors
+        using SettingsView.background_list_item_white and SettingsView.background_list_item_gray
+        for readability. Displays an error via QMessageBox if data retrieval fails.
 
         Returns:
             None
@@ -352,14 +366,14 @@ class ListGraphicsWindow(QWidget):
                     label.setAlignment(Qt.AlignCenter)
                     label.setStyleSheet("border: 1px solid black;")
                     if row % 2 == 0:
-                        label.setStyleSheet(label.styleSheet() + "background-color: #FFFFFF;")
+                        label.setStyleSheet(label.styleSheet() + SettingsView.background_list_item_white)
                     else:
-                        label.setStyleSheet(label.styleSheet() + "background-color: #D3D3D3;")
+                        label.setStyleSheet(label.styleSheet() + SettingsView.background_list_item_gray)
                     content_layout.addWidget(label, row, col)
 
                 delete_button = QPushButton("")
                 delete_button.setFixedWidth(50)
-                delete_button.setStyleSheet("background-color: #F8CECC; border: 1px solid black;")
+                delete_button.setStyleSheet(SettingsView.cancel_button)
                 delete_button.clicked.connect(
                     lambda checked, a=area, b=breed, c=condition: self._delete_graphic(
                         area=area, breed=breed, condition=condition
@@ -376,8 +390,8 @@ class ListGraphicsWindow(QWidget):
     def _edit_block(self, str_line: str, type_settings: TypeSettings) -> None:
         """Open a form to edit an existing item.
 
-        Opens an UpdateForm for the specified item. Tracks the form and refreshes the UI
-        when it closes.
+        Opens an UpdateForm for the specified item, styled with SettingsView. Tracks the form
+        in the forms list and refreshes the UI when it closes, clearing the forms list.
 
         Args:
             str_line (str): The name of the item to edit.
@@ -401,7 +415,8 @@ class ListGraphicsWindow(QWidget):
         """Open a form to add a new item or graphic.
 
         Opens a CreateForm for areas, breeds, or conditions, or an AddForest form for
-        graphics. Tracks the form and refreshes the UI when it closes.
+        graphics, both styled with SettingsView. Tracks the form in the forms list and
+        refreshes the UI when it closes, clearing the forms list.
 
         Args:
             type_settings (TypeSettings): The type of item or graphic to add (AREA, BREED, CONDITION, or GRAPHIC).
@@ -421,8 +436,9 @@ class ListGraphicsWindow(QWidget):
     def _delete_block(self, str_line: str, type_settings: TypeSettings) -> None:
         """Delete an item if it is not used in graphics.
 
-        Deletes the specified item using the appropriate service and refreshes the UI.
-        Displays an error if the item is used in graphics.
+        Deletes the specified item using the appropriate service (AreasService, BreedsService,
+        or ConditionsService) and refreshes the UI. Displays an error via QMessageBox if the
+        item is used in graphics.
 
         Args:
             str_line (str): The name of the item to delete.
@@ -455,7 +471,8 @@ class ListGraphicsWindow(QWidget):
     def _delete_graphic(self, area: str, breed: str, condition: str) -> None:
         """Delete a graphic entry.
 
-        Removes the specified graphic using GraphicsService and refreshes the UI.
+        Removes the specified graphic using GraphicsService and refreshes the UI via
+        refresh_ui to reflect the updated data.
 
         Args:
             area (str): The area of the graphic.
