@@ -14,18 +14,20 @@ from .ElementForm import ElementForm
 from ..Services.AreasService import AreasService
 from ..Services.BreedsService import BreedsService
 from ..Services.ConditionsService import ConditionsService
+from ..background_information.SettingView import SettingsView
 
 
 class UpdateForm(ElementForm):
     """A form for updating existing elements in a PySide6-based GUI application.
 
     This class extends ElementForm to provide a user interface for modifying existing
-    elements of type Area, Breed, or Condition. It retrieves current data, populates
-    form fields, validates user input, and updates the element through the appropriate
-    service (AreasService, BreedsService, or ConditionsService).
+    elements of type Area, Breed, or Condition. It retrieves current data from services,
+    populates form fields, validates user input using validate_name and validate_float,
+    applies styles from SettingsView for field validation, and updates the element through
+    the appropriate service (AreasService, BreedsService, or ConditionsService).
 
     Attributes:
-        form_closed (Signal): Emitted when the form is closed.
+        form_closed (Signal): Emitted when the form is closed, inherited from ElementForm.
         manager_areas (AreasService): Service for managing Area elements.
         manager_breeds (BreedsService): Service for managing Breed elements.
         manager_conditions (ConditionsService): Service for managing Condition elements.
@@ -34,6 +36,12 @@ class UpdateForm(ElementForm):
         file_name_element (str): The code or identifier of the element.
         age_thinning (float, optional): The age thinning value for Breed elements.
         age_thinning_save (float, optional): The age thinning save value for Breed elements.
+        form_name (QLineEdit): Input field for the element's name, inherited from ElementForm.
+        form_code_name (QLineEdit): Input field for the element's code, inherited from ElementForm.
+        form_age_input (QLineEdit, optional): Input field for breed age thinning (BREED only),
+            inherited from ElementForm.
+        form_age_save_input (QLineEdit, optional): Input field for breed age thinning save
+            (BREED only), inherited from ElementForm.
     """
 
     form_closed = Signal()
@@ -41,9 +49,16 @@ class UpdateForm(ElementForm):
     def __init__(self, type_settings: TypeSettings, name_element: str) -> None:
         """Initialize the UpdateForm with specified type settings and element name.
 
+        Sets up the form by calling ElementForm's initializer to create the UI, initializes
+        services, retrieves existing element data, and populates fields via _populate_fields.
+        Sets a title indicating the element being updated and applies styles from SettingsView.
+
         Args:
-            type_settings (TypeSettings): The type of settings (AREA, BREED, or CONDITION).
+            type_settings (TypeSettings): The type of element (AREA, BREED, or CONDITION).
             name_element (str): The name of the element to be updated.
+
+        Returns:
+            None
         """
         self.manager_areas = AreasService()
         self.manager_breeds = BreedsService()
@@ -69,8 +84,8 @@ class UpdateForm(ElementForm):
     def _populate_fields(self) -> None:
         """Populate form fields with existing element data.
 
-        Fills the form fields with the current values of the element, including name, code,
-        and breed-specific fields (age_thinning, age_thinning_save) if applicable.
+        Fills the form fields with current values of the element (name, code, and breed-specific
+        fields if applicable) retrieved from the respective service, using styles from SettingsView.
 
         Returns:
             None
@@ -84,9 +99,11 @@ class UpdateForm(ElementForm):
     def _save_element(self) -> None:
         """Save the updated element data.
 
-        Validates the input fields and updates the element in the appropriate service
-        (AreasService, BreedsService, or ConditionsService). Displays an error message
-        if validation fails or an exception occurs during saving.
+        Validates input fields (name, code, and breed-specific fields if applicable) using
+        validate_name and validate_float. Checks for duplicate names or codes via the respective
+        service. Applies SettingsView.error_border to invalid fields and SettingsView.true_border
+        to valid ones. Updates the element using the appropriate service and closes the form on
+        success. Exits early if validation fails, displaying an error message if an exception occurs.
 
         Returns:
             None
@@ -103,16 +120,16 @@ class UpdateForm(ElementForm):
         if self.type_settings == TypeSettings.BREED:
             if validate_float(self.form_age_input.text().replace(",", ".")) is None:
                 flag_error[2] = True
-                self.form_age_input.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_age_input.setStyleSheet(SettingsView.error_border)
             else:
                 age_thinning = float(self.form_age_input.text().replace(",", "."))
-                self.form_age_input.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+                self.form_age_input.setStyleSheet(SettingsView.true_border)
             if validate_float(self.form_age_save_input.text().replace(",", ".")) is None:
                 flag_error[3] = True
-                self.form_age_save_input.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_age_save_input.setStyleSheet(SettingsView.error_border)
             else:
                 age_thinning_save = float(self.form_age_save_input.text().replace(",", "."))
-                self.form_age_save_input.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+                self.form_age_save_input.setStyleSheet(SettingsView.true_border)
 
         if self.type_settings == TypeSettings.AREA:
             if (self.old_name_element != name and self.manager_areas.exist_name_area(name)) or not validate_name(name):
@@ -143,14 +160,14 @@ class UpdateForm(ElementForm):
             ) or not validate_name(code_name):
                 flag_error[1] = True
 
-        self.form_name.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
-        self.form_code_name.setStyleSheet("border: 1px solid gray; border-radius: 5px; padding: 2px;")
+        self.form_name.setStyleSheet(SettingsView.true_border)
+        self.form_code_name.setStyleSheet(SettingsView.true_border)
 
         if True in flag_error:
             if flag_error[0]:
-                self.form_name.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_name.setStyleSheet(SettingsView.error_border)
             if flag_error[1]:
-                self.form_code_name.setStyleSheet("border: 1px solid red; border-radius: 5px; padding: 2px;")
+                self.form_code_name.setStyleSheet(SettingsView.error_border)
             return
 
         try:

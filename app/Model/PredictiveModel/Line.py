@@ -46,7 +46,6 @@ class Line:
         Returns:
             None
         """
-        # TODO: Настроить степень аппроксимации
         self.polynomial_features = polynomial_features or PolynomialFeatures(degree=Settings.DEGREE_APPROXIMATION)
         self.polynomial_regression = polynomial_regression or LinearRegression()
         self.type_line: TypeLine = type_line

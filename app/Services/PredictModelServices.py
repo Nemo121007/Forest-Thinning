@@ -6,8 +6,56 @@ and querying of prediction models for graphics data associated with areas, breed
 
 from .ReferenceDataManagerService import ReferenceDataManagerServices
 from ..background_information.TypeLine import TypeLine
+# import time
+# import tracemalloc
+# import functools
+# import logging
 
 
+# # Настройка логирования
+# logging.basicConfig(filename='New_profile.log',
+# level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# def profile_function(func):
+#     @functools.wraps(func)
+#     def wrapper(*args, **kwargs):
+#         # Запуск замера памяти
+#         tracemalloc.start()
+
+#         # Замер времени
+#         start_time = time.perf_counter()
+
+#         # Выполнение функции
+#         result = func(*args, **kwargs)
+
+#         # Остановка замера времени
+#         end_time = time.perf_counter()
+#         execution_time = end_time - start_time
+
+#         # Получение данных о памяти
+#         current, peak = tracemalloc.get_traced_memory()
+#         tracemalloc.stop()
+
+#         # Логирование результатов
+#         logging.info(
+#             f"Function: {func.__name__}, "
+#             f"Execution Time: {execution_time:.6f} seconds, "
+#             f"Current Memory: {current / 1024:.4f} KB, "
+#             f"Peak Memory: {peak / 1024:.4f} KB"
+#         )
+
+#         return result
+#     return wrapper
+
+# # Применение декоратора ко всем методам класса
+# def apply_profiler_to_class(cls):
+#     for attr_name, attr_value in cls.__dict__.items():
+#         if callable(attr_value) and not attr_name.startswith('__'):
+#             setattr(cls, attr_name, profile_function(attr_value))
+#     return cls
+
+
+# @apply_profiler_to_class
 class PredictModelService:
     """A service class for managing prediction models for graphics data.
 
@@ -423,7 +471,7 @@ class PredictModelService:
             test_error = f"Value {start_parameter} of starting parameter is unacceptable for {type_line} type of line."
             raise ValueError(test_error)
         try:
-            result = self.predict_model.predict_value(type_line=type_line, X=x, start_parameter=start_parameter)
+            result = self.predict_model.predict_value(type_line=type_line, x=x, start_parameter=start_parameter)
             return result
         except Exception as e:
             raise Exception(f"Error get predict value: {str(e)}")
@@ -560,14 +608,15 @@ class PredictModelService:
         except Exception as e:
             raise Exception(f"Error rewriting thinning event: {str(e)}")
 
-    def add_thinning(self, date_thinning: float) -> None:
+    def add_thinning(self, date_thinning: float, value_thinning: float) -> None:
         """Add a thinning event at the specified date.
 
         Inserts a new thinning event at the given date, updating the model's thinning simulation
         and growth track.
 
         Args:
-            date_thinning (float): The date (x-value) for the thinning event.
+            date_thinning (float): The x-coordinate (date) of the thinning event.
+            value_thinning (float): The y-value (past value) before thinning.
 
         Returns:
             None
@@ -576,7 +625,7 @@ class PredictModelService:
             Exception: If the model is not initialized or an error occurs during thinning addition.
         """
         try:
-            self.predict_model.add_thinning(date_thinning=date_thinning)
+            self.predict_model.add_thinning(date_thinning=date_thinning, value_thinning=value_thinning)
         except Exception as e:
             raise Exception(f"Error adding thinning event: {str(e)}")
 

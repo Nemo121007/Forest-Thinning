@@ -38,6 +38,7 @@ from ..background_information.TypeLine import TypeLine
 from ..background_information.TypeSettings import TypeSettings
 from ..background_information.Settings import Settings
 from ..background_information.General_functions import cast_coordinates_point
+from ..background_information.SettingView import SettingsView
 
 
 class MainWindow(QWidget):
@@ -45,8 +46,10 @@ class MainWindow(QWidget):
 
     Provides a PySide6-based GUI with a header for actions (e.g., open, save, settings),
     an info panel for selecting area, breed, and condition, and a main area with a plot
-    widget for graphics and scrollable information blocks. Interacts with services to
-    manage data and predictions.
+    widget for graphics and scrollable information blocks. Supports mouse interactions
+    (double-click for thinning events, right-click for bearing points) and uses styles
+    from SettingsView and constants from Settings. Interacts with services to manage
+    data and predictions.
 
     Attributes:
         manager_areas (AreasService): Service for managing area data.
@@ -74,15 +77,28 @@ class MainWindow(QWidget):
         form_combo_area (QComboBox): Combo box for selecting areas.
         form_combo_breed (QComboBox): Combo box for selecting breeds.
         form_combo_condition (QComboBox): Combo box for selecting conditions.
+        form_scroll_area (QScrollArea): Scroll area for information blocks.
+        start_point_edit_field (QLineEdit): Input field for start age (not used in logic).
+        area_point_edit_field (QLineEdit): Input field for area (not used in logic).
+        save_check_box (QCheckBox): Checkbox for protective forest mode.
         graphic (QWidget): Widget containing the plot.
         graphic_layout (QVBoxLayout): Layout for the plot widget.
+        age_thinning (float): Age thinning value for the current breed.
+        age_thinning_save (float): Age thinning save value for the current breed.
+        start_point (tuple[float, float]): Start point coordinates for bearing line.
+        list_value_y_bearing_line (list[float]): Y-values for bearing line.
+        list_value_track_thinning (list[float]): Data for thinning prediction line.
+        list_record_planned_thinning (list[dict[str, float]]): List of planned thinning records.
+        predict_line_item (pg.PlotDataItem): Plot item for the thinning prediction line.
     """
 
     def __init__(self):
         """Initialize the MainWindow.
 
-        Sets up the window title, geometry, background, and UI components (header, info
-        panel, main content). Initializes services and loads initial parameters.
+        Sets up the window title, geometry, background color from SettingsView, and UI
+        components (header, info panel, main content). Initializes services, attributes
+        (e.g., start_point, predict_line_item), and calls replace_graphic to load initial
+        data and plot.
 
         Returns:
             None
@@ -127,7 +143,7 @@ class MainWindow(QWidget):
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("white"))
+        palette.setColor(QPalette.Window, QColor(SettingsView.main_background_filling_color))
         self.setPalette(palette)
 
         layout = QVBoxLayout()
@@ -148,15 +164,15 @@ class MainWindow(QWidget):
     def create_header(self) -> QWidget:
         """Create the header panel with action buttons.
 
-        Constructs a header with buttons for opening, saving, and accessing graphics lists
-        and settings, styled with a yellow background.
+        Constructs a header with buttons for opening, saving, saving as, accessing graphics
+        lists, and settings, styled with SettingsView.background_color_button. Note that
+        'Open', 'Save', 'Save As', and 'Settings' buttons are not connected to actions.
 
         Returns:
             QWidget: The header widget containing buttons.
         """
         header = QWidget()
         header.setFixedHeight(30)
-        header.setStyleSheet("background-color: #FFF2CC;")
 
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(5, 0, 5, 0)
@@ -164,13 +180,13 @@ class MainWindow(QWidget):
         # Добавляем кнопки слева
         btn_open = QPushButton("Открыть")
         btn_open.setFixedWidth(150)
-        btn_open.setStyleSheet("background-color: #D5E8D4;")
+        btn_open.setStyleSheet(SettingsView.background_color_button)
         btn_save = QPushButton("Сохранить")
         btn_save.setFixedWidth(150)
-        btn_save.setStyleSheet("background-color: #D5E8D4;")
+        btn_save.setStyleSheet(SettingsView.background_color_button)
         btn_save_as = QPushButton("Сохранить как")
         btn_save_as.setFixedWidth(150)
-        btn_save_as.setStyleSheet("background-color: #D5E8D4;")
+        btn_save_as.setStyleSheet(SettingsView.background_color_button)
 
         header_layout.addWidget(btn_open)
         header_layout.addWidget(btn_save)
@@ -182,12 +198,12 @@ class MainWindow(QWidget):
         # Добавляем кнопки справа
         btn_list_graphics = QPushButton("Список графиков")
         btn_list_graphics.setFixedWidth(150)
-        btn_list_graphics.setStyleSheet("background-color: #D5E8D4;")
+        btn_list_graphics.setStyleSheet(SettingsView.background_color_button)
         btn_list_graphics.clicked.connect(self.open_list_graphics)
 
         btn_settings = QPushButton("Настройки")
         btn_settings.setFixedWidth(150)
-        btn_settings.setStyleSheet("background-color: #D5E8D4;")
+        btn_settings.setStyleSheet(SettingsView.background_color_button)
         header_layout.addWidget(btn_list_graphics)
         header_layout.addWidget(btn_settings)
 
@@ -196,7 +212,9 @@ class MainWindow(QWidget):
     def open_list_graphics(self) -> None:
         """Open the list graphics window.
 
-        Creates and displays a ListGraphicsWindow for viewing available graphics.
+        Creates and displays a ListGraphicsWindow, styled with SettingsView, for viewing
+        available graphics. Connects the form_closed signal to replace_graphic to refresh
+        the plot upon closing.
 
         Returns:
             None
@@ -208,31 +226,30 @@ class MainWindow(QWidget):
     def create_info(self) -> QWidget:
         """Create the info panel with parameter selection.
 
-        Constructs a panel with combo boxes for selecting area, breed, condition, and
-        protective forest status, plus placeholders for current settings and results,
-        styled with a blue background.
+        Constructs a panel with combo boxes for selecting area, breed, condition, and a
+        checkbox for protective forest status, styled with SettingsView.background_color
+        and SettingsView.checkbox_style. Includes input fields for forestry details
+        (e.g., 'Лесничество', 'Квартал') that are not used in the current logic.
 
         Returns:
             QWidget: The info panel widget containing parameter controls.
         """
         info = QWidget()
         info.setFixedHeight(110)
-        info.setStyleSheet("background-color: #DAE8FC; text-align: center;")
 
         info_layout = QHBoxLayout()
-        info_layout.setContentsMargins(5, 0, 5, 0)
+        info_layout.setContentsMargins(5, 5, 5, 5)
 
         main_setting_widget = QWidget()
         main_setting_widget.setFixedWidth(331)
 
         main_setting = QGridLayout()
-        main_setting.setContentsMargins(5, 0, 5, 0)
-        main_setting.setSpacing(5)
 
         # Виджет для лесного района
         forest_widget = QVBoxLayout()
         forest_area = QLabel("Лесной район")
         forest_combo = QComboBox()
+        forest_combo.setStyleSheet(SettingsView.background_color)
         self.form_combo_area = forest_combo
         forest_combo.currentTextChanged.connect(
             lambda: self.replace_graphic(
@@ -247,6 +264,7 @@ class MainWindow(QWidget):
         breed_widget = QVBoxLayout()
         main_breed = QLabel("Основная порода")
         breed_combo = QComboBox()
+        breed_combo.setStyleSheet(SettingsView.background_color)
         self.form_combo_breed = breed_combo
         breed_combo.currentTextChanged.connect(
             lambda: self.replace_graphic(
@@ -261,6 +279,7 @@ class MainWindow(QWidget):
         conditions_widget = QVBoxLayout()
         type_conditions = QLabel("Тип условий")
         conditions_combo = QComboBox()
+        conditions_combo.setStyleSheet(SettingsView.background_color)
         self.form_combo_condition = conditions_combo
         conditions_combo.currentTextChanged.connect(
             lambda: self.replace_graphic(
@@ -275,6 +294,7 @@ class MainWindow(QWidget):
         save_widget = QVBoxLayout()
         save_forest = QLabel("Защитный лес")
         save_check_box = QCheckBox()
+        save_check_box.setStyleSheet(SettingsView.checkbox_style)
         save_check_box.setChecked(self.flag_save_forest)
         self.save_check_box = save_check_box
         save_check_box.stateChanged.connect(lambda: self.change_save_forest())
@@ -291,20 +311,32 @@ class MainWindow(QWidget):
         current_settings.setContentsMargins(5, 0, 5, 0)
         current_settings.setSpacing(5)
 
-        start_parameter_layout_widget = QWidget()
-        start_parameter_layout = QVBoxLayout(start_parameter_layout_widget)
+        start_parameter_label = QLabel("Начальные параметры")
+        start_parameter_label.setStyleSheet(SettingsView.background_color)
+        current_settings.addWidget(start_parameter_label, 0, 0)
+
         start_parameter_widget = QLabel("Возраст")
+        start_parameter_widget.setStyleSheet(SettingsView.background_color)
+        current_settings.addWidget(start_parameter_widget, 1, 0)
+
         start_parameter_edit_field = QLineEdit()
+        start_parameter_edit_field.setStyleSheet(SettingsView.background_color)
         self.start_point_edit_field = start_parameter_edit_field
-        start_parameter_layout.addWidget(start_parameter_widget)
-        start_parameter_layout.addWidget(start_parameter_edit_field)
-        current_settings.addWidget(start_parameter_layout_widget, 0, 0)
+        current_settings.addWidget(start_parameter_edit_field, 1, 1)
+
+        area_parameter_widget = QLabel("Площадь")
+        area_parameter_widget.setStyleSheet(SettingsView.background_color)
+        current_settings.addWidget(area_parameter_widget, 2, 0)
+
+        area_parameter_edit_field = QLineEdit()
+        area_parameter_edit_field.setStyleSheet(SettingsView.background_color)
+        self.area_point_edit_field = area_parameter_edit_field
+        current_settings.addWidget(area_parameter_edit_field, 2, 1)
 
         auto_mode = QPushButton("Автоматический режим")
+        auto_mode.setStyleSheet(SettingsView.background_color_button)
         auto_mode.clicked.connect(lambda: self.replace_predict())
-        current_settings.addWidget(auto_mode, 0, 1)
-        start_value = QLabel("Начальная полнота")
-        current_settings.addWidget(start_value, 1, 0)
+        current_settings.addWidget(auto_mode, 3, 0)
 
         current_settings_widget.setLayout(current_settings)
 
@@ -314,6 +346,38 @@ class MainWindow(QWidget):
         result_info = QGridLayout()
         result_info.setContentsMargins(5, 0, 5, 0)
         result_info.setSpacing(5)
+
+        name_forestry_label = QLabel("Лесничество")
+        name_forestry_label.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_forestry_label, 0, 0)
+
+        name_forestry_edit_field = QLineEdit()
+        name_forestry_edit_field.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_forestry_edit_field, 0, 1)
+
+        name_district_forestry_label = QLabel("Участковое лесничество")
+        name_district_forestry_label.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_district_forestry_label, 1, 0)
+
+        name_district_forestry_edit_field = QLineEdit()
+        name_district_forestry_edit_field.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_district_forestry_edit_field, 1, 1)
+
+        name_quarter_label = QLabel("Квартал")
+        name_quarter_label.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_quarter_label, 2, 0)
+
+        name_quarter_edit_field = QLineEdit()
+        name_quarter_edit_field.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_quarter_edit_field, 2, 1)
+
+        name_selected_label = QLabel("Выдел")
+        name_selected_label.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_selected_label, 3, 0)
+
+        name_selected_edit_field = QLineEdit()
+        name_selected_edit_field.setStyleSheet(SettingsView.background_color)
+        result_info.addWidget(name_selected_edit_field, 3, 1)
 
         result_info_widget.setLayout(result_info)
 
@@ -331,8 +395,8 @@ class MainWindow(QWidget):
         """Create the main content area with plot and info blocks.
 
         Constructs a horizontal layout with a plot widget on the left (for graphics) and
-        a scrollable area on the right containing information blocks, plus a button to add
-        new blocks.
+        a scrollable area on the right (form_scroll_area, styled with SettingsView.background_color)
+        for information blocks. The scroll area is initially empty.
 
         Returns:
             QWidget: The main content widget.
@@ -342,7 +406,6 @@ class MainWindow(QWidget):
         main_layout.setContentsMargins(5, 0, 5, 0)
 
         self.graphic = QWidget()
-        self.graphic.setStyleSheet("background-color: #DAE8FC; text-align: center;")
         self.graphic.setMinimumWidth(600)
         self.graphic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.graphic)
@@ -351,28 +414,21 @@ class MainWindow(QWidget):
         blocks_container = QWidget()
         blocks_container.setFixedWidth(350)
         blocks_info_layout = QVBoxLayout(blocks_container)
-        blocks_info_layout.setContentsMargins(5, 0, 5, 0)
 
         # Создаем виджет с прокруткой
         scroll_area = QScrollArea()
         self.form_scroll_area = scroll_area
         scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("background-color: #ffffff;")
+        scroll_area.setStyleSheet(SettingsView.background_color)
 
         # Создаем контейнер для блоков информации
         blocks_widget = QWidget()
         blocks_layout = QVBoxLayout(blocks_widget)
         blocks_layout.setContentsMargins(5, 5, 5, 5)
-        blocks_layout.setSpacing(5)
 
         # Устанавливаем виджет с блоками в область прокрутки
         scroll_area.setWidget(blocks_widget)
         blocks_info_layout.addWidget(scroll_area)
-
-        btn_block_info = QPushButton("Добавить блок")
-        btn_block_info.setFixedHeight(50)
-        btn_block_info.setStyleSheet("background-color: #D5E8D4; text-align: center;")
-        blocks_info_layout.addWidget(btn_block_info)
 
         main_layout.addWidget(blocks_container)
         main.setLayout(main_layout)
@@ -386,9 +442,11 @@ class MainWindow(QWidget):
     ) -> QWidget:
         """Create an information block for thinning event data.
 
-        Constructs a QWidget displaying details of a thinning event, including the felling
-        date, reserve values before and after thinning, and fullness values. Includes a
-        cancel button to delete the thinning event by index.
+        Constructs a QWidget styled with SettingsView.item_block, displaying details of a
+        thinning event, including felling date, reserve values before and after thinning,
+        and fullness values. Includes a cancel button styled with SettingsView.cancel_button
+        to delete the thinning event by index. Intensity fields ('Инт.зап', 'Инт.об') are
+        displayed but not calculated in the current implementation.
 
         Args:
             index (float): The index of the thinning event in the list of planned thinnings.
@@ -400,9 +458,10 @@ class MainWindow(QWidget):
             QWidget: The information block widget with labels and a cancel button.
         """
         main_info_block = QWidget()
-        main_info_block.setStyleSheet("background-color: #DAE8FC;")
+        main_info_block.setStyleSheet(SettingsView.item_block)
         main_info_block.setContentsMargins(5, 0, 5, 0)
         main_info_block.setFixedWidth(300)
+        main_info_block.setFixedHeight(150)
 
         main_info_block_layout = QGridLayout(main_info_block)
         main_info_block_layout.setContentsMargins(5, 0, 5, 0)
@@ -508,7 +567,7 @@ class MainWindow(QWidget):
 
         # Кнопки управления
         btn_cancel = QPushButton()
-        btn_cancel.setStyleSheet("background-color: #F8CECC; text-align: center;")
+        btn_cancel.setStyleSheet(SettingsView.cancel_button)
         btn_cancel.setFixedWidth(25)
         btn_cancel.clicked.connect(lambda: self.delete_thinning(index=index))
         main_info_block_layout.addWidget(btn_cancel, 0, 4)
@@ -527,9 +586,9 @@ class MainWindow(QWidget):
         """Update a thinning event information block and refresh the plot.
 
         Updates the thinning event data in info_block with a new date_thinning if provided
-        and valid (within the allowed range between adjacent events). Calls the prediction
-        model to rewrite the thinning event, refreshes the thinning data, and updates the plot.
-        Ignores the height parameter in the current implementation.
+        and valid (positive integer within the allowed range between adjacent events).
+        Calls PredictModelService to rewrite the thinning event, refreshes thinning data,
+        and updates the plot via _update_graphic. Ignores the height parameter.
 
         Args:
             index (int): The index of the thinning event in the list of planned thinnings.
@@ -568,14 +627,14 @@ class MainWindow(QWidget):
         self._update_graphic()
 
     def _update_graphic(self) -> None:
-        """Update the plot widget with prediction data and handle double-click events on the predict line.
+        """Update the plot widget with prediction data and handle double-click events.
 
-        Creates or updates a pyqtgraph PlotWidget to display minimum logging, maximum
-        logging, and economic minimum lines, with a filled area between economic minimum
-        and maximum logging lines. Repeats the minimum logging line for visibility. Sets
-        axis labels and limits based on model data. Adds double-click event handling for
-        the predict line thinning with an increased detection area using a buffer zone.
-        Updates UI blocks with thinning data via create_blocks_with_thinning_data.
+        Creates or updates a pyqtgraph PlotWidget styled with SettingsView, displaying
+        minimum logging, maximum logging, economic minimum, and bearing lines, with a
+        filled area between economic minimum and maximum logging lines. Adds a vertical
+        thinning age line based on flag_save_forest. Handles double-click events on the
+        predict line using Settings.DETENTION_BUFFER. Clears the old plot before adding
+        the new one and updates UI blocks via create_blocks_with_thinning_data.
 
         Returns:
             None
@@ -585,7 +644,7 @@ class MainWindow(QWidget):
 
         # Создаем PlotWidget
         plot_widget = pg.PlotWidget()
-        plot_widget.setBackground("w")
+        plot_widget.setBackground(SettingsView.main_background_filling_color)
 
         # Обработчик двойного клика
         # Получаем данные линии
@@ -624,21 +683,21 @@ class MainWindow(QWidget):
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_logging,
-            pen=pg.mkPen((0, 0, 255, 255), width=2),
+            pen=pg.mkPen(color=SettingsView.main_line_color, width=2),
             name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
         )
 
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_max_logging,
-            pen=pg.mkPen((0, 0, 255, 255), width=2),
+            pen=pg.mkPen(color=SettingsView.main_line_color, width=2),
             name=f"Line {TypeLine.ECONOMIC_MAX_LINE.value}",
         )
 
         plot_widget.plot(
             self.list_value_x,
             self.list_value_y_min_economic,
-            pen=pg.mkPen((255, 0, 255, 255), width=2),
+            pen=pg.mkPen(color=SettingsView.main_line_color, width=2),
             name=f"Line {TypeLine.ECONOMIC_MIN_LINE.value}",
         )
         # scatter_before = pg.ScatterPlotItem(
@@ -646,7 +705,7 @@ class MainWindow(QWidget):
         #     size=10,
         #     pen=pg.mkPen(None),
         #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-        #     symbol='o'
+        #     symbol="o",
         # )
         # plot_widget.addItem(scatter_before)
 
@@ -654,17 +713,9 @@ class MainWindow(QWidget):
         polygon = pg.FillBetweenItem(
             curve1=pg.PlotDataItem(self.list_value_x, self.list_value_y_min_economic),
             curve2=pg.PlotDataItem(self.list_value_x, self.list_value_y_max_logging),
-            brush=pg.mkBrush(color=(0, 0, 0, 15)),
+            brush=pg.mkBrush(color=SettingsView.fill_color_graph),
         )
         plot_widget.addItem(polygon)
-
-        # Повторяем линию минимального уровня рубки (для видимости)
-        plot_widget.plot(
-            self.list_value_x,
-            self.list_value_y_min_logging,
-            pen=pg.mkPen((0, 0, 255, 255), width=2),
-            name=f"Line {TypeLine.MIN_LEVEL_LOGGING.value}",
-        )
 
         # Линия возраста рубки
         if self.flag_save_forest:
@@ -674,7 +725,7 @@ class MainWindow(QWidget):
         plot_widget.plot(
             [target_value, target_value],
             [self.y_min, self.y_max],
-            pen=pg.mkPen((0, 0, 0, 255), width=2),
+            pen=pg.mkPen(SettingsView.line_age_thinning, width=2),
             name="Line thinning forest",
         )
 
@@ -683,7 +734,7 @@ class MainWindow(QWidget):
                 pos=[(self.start_point[0], self.start_point[1])],
                 size=10,
                 pen=pg.mkPen(None),
-                brush=pg.mkBrush(0, 255, 0),
+                brush=pg.mkBrush(color=SettingsView.line_bearing_color),
                 symbol="o",
             )
             plot_widget.addItem(scatter)
@@ -693,7 +744,7 @@ class MainWindow(QWidget):
             plot_widget.plot(
                 self.list_value_x,
                 self.list_value_y_bearing_line,
-                pen=pg.mkPen((0, 255, 0, 255), width=2),
+                pen=pg.mkPen(color=SettingsView.line_bearing_color, width=2),
                 name="Bearing line",
             )
             # scatter_before = pg.ScatterPlotItem(
@@ -701,7 +752,7 @@ class MainWindow(QWidget):
             #     size=10,
             #     pen=pg.mkPen(None),
             #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-            #     symbol='o'
+            #     symbol="o",
             # )
             # plot_widget.addItem(scatter_before)
 
@@ -718,7 +769,7 @@ class MainWindow(QWidget):
             #     size=10,
             #     pen=pg.mkPen(None),
             #     brush=pg.mkBrush(0, 255, 0),  # Зеленый цвет
-            #     symbol='o'
+            #     symbol="o",
             # )
             # plot_widget.addItem(scatter_before)
 
@@ -739,9 +790,9 @@ class MainWindow(QWidget):
         """Handle right-click events on the plot to add a bearing point.
 
         Processes right-click events to add a bearing point at the clicked position after
-        user confirmation via a dialog, updates the bearing line, and refreshes the plot.
-        Ignores clicks if the y-value is not within the valid range defined by minimum and
-        maximum logging lines (i.e., y >= min_y or y <= max_y).
+        user confirmation via QMessageBox. Uses cast_coordinates_point to round coordinates
+        and checks y-value against PredictModelService's min/max logging lines. Updates the
+        bearing line and refreshes the plot via _update_graphic.
 
         Args:
             plot_widget (pg.PlotWidget): The plot widget where the event occurred.
@@ -776,6 +827,8 @@ class MainWindow(QWidget):
                 self.predict_model.initialize_bearing_line()
                 self.list_value_y_bearing_line = self.predict_model.get_bearing_line()
             self.start_point = (x, y)
+            self.start_point_edit_field.setText(str(x))
+            self.area_point_edit_field.setText(str(y))
 
             self._update_graphic()
             event.accept()
@@ -787,9 +840,10 @@ class MainWindow(QWidget):
     ) -> None:
         """Handle double-click events on the predict line to add or correct thinning events.
 
-        Processes double-click events on the thinning prediction line to add a new thinning
-        event or correct an existing one if the click is within the detection buffer. Updates
-        the thinning data and refreshes the plot.
+        Processes double-click events within Settings.DETENTION_BUFFER of the thinning
+        prediction line to add a new thinning event or correct an existing one. Uses
+        cast_coordinates_point to round coordinates, updates thinning data via
+        PredictModelService, and refreshes the plot via _update_graphic.
 
         Args:
             plot_widget (pg.PlotWidget): The plot widget where the event occurred.
@@ -814,16 +868,17 @@ class MainWindow(QWidget):
                 # Проверяем, находится ли клик в пределах буфера
                 if min_distance <= Settings.DETENTION_BUFFER:
                     x, y = cast_coordinates_point(x=click_x, y=click_y)
-                    print(str("Двойной клик на линии прогнозируемой рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
                     list_date_thinning = []
                     for item in self.list_record_planned_thinning:
                         list_date_thinning.append(item.get("x"))
                     if x in list_date_thinning:
+                        print(str("Двойной клик корректировки рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
                         self.predict_model.correct_thinning(date_thinning=x, value_thinning=y)
                         self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
                         self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
                     else:
-                        self.predict_model.add_thinning(date_thinning=x)
+                        print(str("Двойной клик рубки:" + f"Возраст={x:.0f}, Полнота={y:.1f}"))
+                        self.predict_model.add_thinning(date_thinning=x, value_thinning=y)
                         self.list_record_planned_thinning = self.predict_model.get_list_record_planned_thinning()
                         self.list_value_track_thinning = self.predict_model.get_list_value_track_thinning()
                     self._update_graphic()
@@ -855,9 +910,9 @@ class MainWindow(QWidget):
     def change_save_forest(self):
         """Update the protective forest mode and refresh the plot.
 
-        Sets the protective forest flag based on the UI checkbox state, updates the
-        prediction model, checks the graph for protective forest constraints, refreshes
-        the thinning data, and updates the plot.
+        Sets the protective forest flag based on the save_check_box state, updates
+        PredictModelService, checks the graph for protective forest constraints, refreshes
+        thinning data, and updates the plot via _update_graphic.
 
         Returns:
             None
@@ -873,9 +928,10 @@ class MainWindow(QWidget):
     def replace_graphic(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
         """Replace the current graphic with updated area, breed, or condition.
 
-        Updates combo box selections, reinitializes the prediction model with the current
-        area, breed, condition, and forest mode, loads the model, retrieves plotting data,
-        and updates the prediction and plot.
+        Updates combo box selections via changed_combo_boxes, resets graphic attributes
+        (e.g., x_min, predict_line_item), reinitializes PredictModelService with the
+        current area, breed, condition, and forest mode, loads plotting data styled with
+        SettingsView, and updates the plot via _update_graphic.
 
         Args:
             type_changed_parameter (TypeSettings, optional): The type of parameter changed (AREA, BREED, CONDITION).
@@ -938,13 +994,13 @@ class MainWindow(QWidget):
     def changed_combo_boxes(self, type_changed_parameter: TypeSettings = None, new_value_parameter: str = None) -> None:
         """Update combo box selections based on a changed parameter.
 
-        Updates the area, breed, and condition selections in the UI combo boxes based on the
-        changed parameter type (area, breed, or condition) and its new value, ensuring valid
-        combinations from the services. Refreshes combo box contents without triggering signals.
+        Updates area, breed, and condition selections in form_combo_area, form_combo_breed,
+        and form_combo_condition using services to filter allowed values. Blocks signals
+        to prevent recursive updates and sets current selections to valid values.
 
         Args:
             type_changed_parameter (TypeSettings, optional): The type of parameter changed (AREA, BREED, CONDITION).
-            Defaults to None (uses AREA).
+                Defaults to None (uses AREA).
             new_value_parameter (str, optional): The new value for the changed parameter. Defaults to None.
 
         Returns:
@@ -1014,8 +1070,9 @@ class MainWindow(QWidget):
         """Update prediction data and refresh the plot.
 
         Runs a thinning simulation and initializes the thinning track if a bearing line
-        exists, then updates the thinning data and plot. The start_parameter and
-        flag_save_forest parameters are currently ignored.
+        exists, then updates thinning data and plot via _update_graphic. Calls
+        create_blocks_with_thinning_data to refresh UI blocks. Ignores start_parameter
+        and flag_save_forest parameters in the current implementation.
 
         Args:
             start_parameter (str, optional): Ignored in the current implementation. Defaults to None.
@@ -1036,9 +1093,10 @@ class MainWindow(QWidget):
     def create_blocks_with_thinning_data(self) -> None:
         """Create UI information blocks for thinning simulation data.
 
-        Clears existing blocks in the scroll area and generates new information blocks for
-        each thinning event in list_record_planned_thinning, displaying growth and felling
-        dates, and reserve values before and after thinning using _create_info_block.
+        Clears existing blocks in form_scroll_area and generates new information blocks
+        styled with SettingsView.info_block for each thinning event in
+        list_record_planned_thinning using _create_info_block, displaying felling dates
+        and reserve values.
 
         Returns:
             None
@@ -1057,6 +1115,8 @@ class MainWindow(QWidget):
         if self.list_record_planned_thinning:
             for index, record in enumerate(self.list_record_planned_thinning):
                 info_block = self._create_info_block(index=index, info_block=record)
+                info_block.setObjectName("info_block")
+                info_block.setStyleSheet(SettingsView.info_block)
                 blocks_layout.addWidget(info_block)
 
 
